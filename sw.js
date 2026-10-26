@@ -1,5 +1,5 @@
 /* Service worker: cache cangkang aplikasi. Panggilan ke server Apps Script tidak pernah di-cache. */
-var CACHE = 'kb-wako-v2';
+var CACHE = 'kb-wako-v3';
 var SHELL = ['./', 'index.html', 'manifest.webmanifest', 'assets/icon.png', 'assets/icon-192.png', 'assets/favicon-32.png', 'assets/apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
