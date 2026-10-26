@@ -82,6 +82,24 @@ th{color:var(--mu);font-weight:600}
 .who{color:var(--mu)}
 .foot{margin:36px 0 8px;text-align:center;font-size:12px;color:var(--mu)}
 details summary{cursor:pointer;color:var(--mu)}
+#jv{position:fixed;inset:0;z-index:50;display:grid;grid-template-columns:1fr 1fr;background:#05070c;color:#fff;user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#jv[hidden]{display:none}
+#jv .side{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#jv .side.r{background:#b3202c}#jv .side.b{background:#1a4fb8}
+#jv .side:active{filter:brightness(1.18)}
+#jv .num{font:400 clamp(120px,34vw,380px)/1 "Archivo Black",Archivo,Arial,sans-serif;font-variant-numeric:tabular-nums}
+#jv .minus{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom,0px));width:76px;height:76px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;border:2px solid rgba(255,255,255,.55);font-size:36px;padding:0}
+#jv .side.r .minus{left:20px}#jv .side.b .minus{right:20px}
+#jv .top{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:0;right:0;text-align:center;font-weight:700;font-size:20px;opacity:.9;pointer-events:none;z-index:2}
+#jv .ov{position:absolute;inset:0;z-index:3;background:rgba(0,0,0,.74);display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;font:700 clamp(26px,4.5vw,44px)/1.2 "Archivo Black",Archivo,Arial,sans-serif}
+#jv .ov[hidden]{display:none}
+#jv .mn{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:4;padding:14px 32px;border-radius:999px;background:rgba(0,0,0,.6);color:#fff;border:2px solid rgba(255,255,255,.55);font-weight:700;font-size:18px}
+#jv .jm{position:absolute;inset:0;z-index:5;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center}
+#jv .jm[hidden]{display:none}
+#jv .box{display:grid;gap:10px;min-width:240px;background:#fff;color:#12204A;padding:18px;border-radius:14px}
+#jv .box button{padding:14px;font-weight:700;font-size:16px;border-radius:10px}
+body.jmode #msg{position:fixed;left:12px;right:12px;bottom:110px;z-index:60;background:rgba(0,0,0,.85);color:#fff;padding:10px;border-radius:8px;text-align:center}
+body.jmode #msg:empty{display:none}
 </style>
 </head>
 <body>
@@ -116,6 +134,7 @@ details summary{cursor:pointer;color:var(--mu)}
   <div id="ctl"></div>
 </div>
 
+<div id="jv" hidden></div>
 <div class="foot">© 2026 Global Sport Management · Kickboxing Digital Scoring</div>
 
 <script>
@@ -123,15 +142,15 @@ var $=function(i){return document.getElementById(i)};
 /* Alamat web app Apps Script - dipakai saat dibuka dari GitHub Pages */
 var API_URL="https://script.google.com/macros/s/AKfycbzHpY8_7raR_4JYRKp2W1I9Bty2kfo_OVroUHgemkh5iDLux5onSgLPJfAHTM0p3UvG/exec";
 var hasGS=(typeof google!=="undefined"&&google.script&&google.script.run);
-var T=null,ME=null,U=null,LAST=null,B=null,fAt=0,polling=false,beeped="",resuming=false;
+var pend=0,T=null,ME=null,U=null,LAST=null,B=null,fAt=0,polling=false,beeped="",resuming=false;
 var RN={admin:"Admin",j1:"Juri 1",j2:"Juri 2",j3:"Juri 3",timer:"Timekeeper",hakim:"Dewan hakim",monitor:"Monitor"};
 var ROLES=["admin","j1","j2","j3","timer","hakim","monitor"];
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function toast(t,bad){var m=$("msg");m.textContent=t;m.className=bad?"bad":"ok";clearTimeout(toast.t);toast.t=setTimeout(function(){m.textContent="";m.className=""},6000)}
 function ls(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k));if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v))}catch(e){}return null}
-function call(fn,args,ok){
+function call(fn,args,ok,bad){
   ok=ok||function(){};
-  var fail=function(m){polling=false;m=String(m||"").replace(/^Error: /,"");toast(m,1);if(/Sesi habis/.test(m))expired()};
+  var fail=function(m){polling=false;if(bad)bad();m=String(m||"").replace(/^Error: /,"");toast(m,1);if(/Sesi habis/.test(m))expired()};
   if(hasGS){
     var r=google.script.run.withSuccessHandler(ok).withFailureHandler(function(e){fail((e&&e.message)||e)});
     r[fn].apply(r,args)
@@ -150,6 +169,7 @@ function expired(){
 function show(v){
   ["home","join","create","hist","app"].forEach(function(x){$(x).hidden=(x!=v)});
   var t=$("ttl");t.className=v=="app"?"":"big";t.textContent=(v=="app"&&ME)?ME.nama:"Kickboxing Digital Scoring";
+  if(v!="app"){$("jv").hidden=true;document.body.classList.remove("jmode");document.body.style.overflow=""}
   window.scrollTo(0,0)
 }
 
@@ -213,9 +233,14 @@ function showHist(){
 function openOwnEv(id){call("openOwn",[U.token,id],startSession)}
 
 /* Sesi event */
-function enter(){show("app");$("who").textContent=RN[ME.role]+" · Event "+ME.kode;buildCtl();B=null;drawBoard();poll()}
-function poll(){if(!ME||polling)return;polling=true;call("getBoard",[T],function(b){polling=false;apply(b)})}
-function apply(b){if(!ME)return;B=b;fAt=Date.now();drawBoard();drawCtl()}
+function isJ(){return ME&&/^j[123]$/.test(ME.role)}
+function enter(){
+  show("app");$("who").textContent=RN[ME.role]+" · Event "+ME.kode;B=null;
+  if(isJ()){$("app").hidden=true;$("ctl").innerHTML="";buildJudge();drawJudge()}else{buildCtl();drawBoard()}
+  poll()
+}
+function poll(){if(!ME||polling)return;polling=true;call("getBoard",[T],function(b){polling=false;if(pend>0)return;apply(b)})}
+function apply(b){if(!ME)return;B=b;fAt=Date.now();if(isJ())drawJudge();else{drawBoard();drawCtl()}}
 function act(type,p,after){call("act",[T,type,p||{}],function(r){
   if(r&&r.board)apply(r.board);if(r&&r.msg)toast(r.msg);if(after)after(r)})}
 
@@ -243,7 +268,7 @@ function drawBoard(){
 }
 function beep(){try{var c=new (window.AudioContext||window.webkitAudioContext)(),o=c.createOscillator();o.frequency.value=880;o.connect(c.destination);o.start();setTimeout(function(){o.stop();c.close()},700)}catch(e){}}
 setInterval(function(){
-  if(!B||B.empty)return;var r=remain(),c=$("clk");
+  if(isJ())drawJudge();if(!B||B.empty)return;var r=remain(),c=$("clk");
   if(c){c.textContent=fmt(r);c.className="clock"+(r<=10?" low":"")}
   var k=B.st.mid+"-"+B.st.rd;
   if(B.running&&r<=0&&beeped!==k&&ME&&(ME.role=="timer"||ME.role=="monitor")){beeped=k;beep()}
@@ -293,6 +318,43 @@ function drawCtl(){
   }
   c.innerHTML=h
 }
+/* Layar juri: layar penuh, hanya input poin */
+function jState(){
+  if(!B||B.empty)return"Menunggu partai diaktifkan";
+  var st=B.st;if(st.final)return"Hasil disahkan";if(st.done)return"Pertandingan selesai";
+  var r=remain();if(B.running&&r>0)return"";
+  if(r<=0)return"Ronde "+(st.rd+1)+" selesai";
+  if(r>=st.info.dur-0.5)return"Menunggu ronde dimulai";
+  return"Dijeda"
+}
+function buildJudge(){
+  var v=$("jv");v.hidden=false;document.body.classList.add("jmode");document.body.style.overflow="hidden";
+  v.innerHTML="<div class='top' id='jvT'></div>"+
+   "<div class='side r' onclick=\"jTap('r',1)\"><div class='num' id='jvR'>0</div><button class='minus' aria-label='Kurangi poin merah' onclick=\"event.stopPropagation();jTap('r',-1)\">&minus;</button></div>"+
+   "<div class='side b' onclick=\"jTap('b',1)\"><div class='num' id='jvB'>0</div><button class='minus' aria-label='Kurangi poin biru' onclick=\"event.stopPropagation();jTap('b',-1)\">&minus;</button></div>"+
+   "<div class='ov' id='jvO' hidden></div>"+
+   "<button class='mn' onclick='jMenu(true)'>Menu</button>"+
+   "<div class='jm' id='jvM' hidden><div class='box'><b>Menu</b><button onclick='fs()'>Layar penuh</button><button onclick='jMenu(false);leave()'>Tutup event</button><button onclick='jMenu(false)'>Batal</button></div></div>"
+}
+function drawJudge(){
+  if(!$("jvT"))return;
+  var st=B&&!B.empty?B.st:null,j=+ME.role[1]-1,rd=st?st.rd:0;
+  $("jvT").textContent=st?"Ronde "+(rd+1)+" · Juri "+(j+1):"Juri "+(j+1);
+  var p=st?st.pts[rd][j]:{r:0,b:0};
+  $("jvR").textContent=p.r;$("jvB").textContent=p.b;
+  var m=jState(),o=$("jvO");o.hidden=!m;if(o.textContent!==m)o.textContent=m
+}
+function jTap(s,d){
+  if(jState())return;
+  var j=+ME.role[1]-1,p=B.st.pts[B.st.rd][j];
+  if(p[s]+d<0)return;
+  p[s]+=d;pend++;drawJudge();
+  try{navigator.vibrate&&navigator.vibrate(d>0?15:30)}catch(e){}
+  call("act",[T,"pt",{s:s,d:d}],function(r){pend--;if(pend===0&&r&&r.board)apply(r.board)},function(){pend--;poll()})
+}
+function jMenu(on){$("jvM").hidden=!on}
+function fs(){try{var e=document.documentElement;if(document.fullscreenElement)document.exitFullscreen();else if(e.requestFullscreen)e.requestFullscreen()}catch(x){}}
+
 /* Admin */
 function addM(){act("addMatch",{merah:$("am").value,biru:$("ab").value,kelas:$("ak").value,aturan:$("au").value,rounds:$("ar").value,dur:$("ad").value},function(){$("am").value="";$("ab").value="";loadM()})}
 function loadM(){call("getMatches",[T],function(l){

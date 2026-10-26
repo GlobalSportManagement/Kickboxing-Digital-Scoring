@@ -12,7 +12,7 @@ Tampilan di GitHub Pages (PWA, bisa diinstal), server di Apps Script.
 | Peran | Tugas |
 |---|---|
 | Admin | Menambah partai, mengaktifkan partai, reset skor partai aktif |
-| Juri 1-3 | Hanya tombol poin merah/biru miliknya sendiri |
+| Juri 1-3 | Layar penuh dua sisi: ketuk sisi merah atau biru untuk +1, tombol minus untuk koreksi. Dikunci otomatis saat ronde belum mulai, dijeda, atau selesai |
 | Timekeeper | Mulai/jeda timer, koreksi waktu, ganti ronde, akhiri pertandingan |
 | Dewan hakim | Knockdown, peringatan, poin minus, mengesahkan hasil |
 | Monitor | Hanya menampilkan papan skor (TV/proyektor) |
