@@ -8,7 +8,7 @@ const FOLDER_ID = '12Pw5Bsb8SBntE9z_bYAxzASg-a59elfl';
 const ROLES = ['admin', 'j1', 'j2', 'j3', 'timer', 'hakim', 'monitor'];
 const HEAD = {
   Events: ['id', 'nama', 'tanggal', 'admin', 'j1', 'j2', 'j3', 'timer', 'hakim', 'monitor', 'folderId', 'recapId', 'kode', 'pemilik', 'dibuat'],
-  Matches: ['eventId', 'no', 'merah', 'biru', 'kelas', 'aturan', 'rounds', 'dur', 'status', 'hasil'],
+  Matches: ['eventId', 'no', 'merah', 'biru', 'kelas', 'aturan', 'rounds', 'dur', 'status', 'hasil', 'rest'],
   Live: ['eventId', 'json'],
   Log: ['waktu', 'eventId', 'partai', 'peran', 'jenis', 'sisi', 'nilai'],
   Riwayat: ['waktu', 'email', 'eventId', 'nama', 'kode', 'peran']
@@ -19,7 +19,7 @@ function doGet() {
     .setTitle('Skoring Kickboxing WAKO')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     // Opsional: hapus tanda // di bawah untuk favicon dari GitHub (PNG/ICO, URL "raw"):
-    // .setFaviconUrl('https://raw.githubusercontent.com/USERNAME/skoring-kickboxing-wako/main/assets/icon.png')
+    // .setFaviconUrl('https://raw.githubusercontent.com/USERNAME/skoring-kickboxing-wako/main/icon.png')
     ;
 }
 
@@ -161,8 +161,8 @@ function init_(m) {
   const n = +m.rounds || 3, dur = +m.dur || 120, pts = [], kd = [];
   for (let i = 0; i < n; i++) { pts.push([{ r: 0, b: 0 }, { r: 0, b: 0 }, { r: 0, b: 0 }]); kd.push({ r: 0, b: 0 }); }
   return {
-    mid: m.no, info: { merah: m.merah, biru: m.biru, kelas: m.kelas, aturan: m.aturan, rounds: n, dur: dur },
-    rd: 0, time: dur, running: false, t0: 0, done: false, final: false, pts: pts, kd: kd,
+    mid: m.no, info: { merah: m.merah, biru: m.biru, kelas: m.kelas, aturan: m.aturan, rounds: n, dur: dur, rest: +m.rest >= 0 && m.rest !== '' ? +m.rest : 60 },
+    rest: false, rd: 0, time: dur, running: false, t0: 0, done: false, final: false, pts: pts, kd: kd,
     w: { r: 0, b: 0 }, m: { r: 0, b: 0 }
   };
 }
@@ -200,7 +200,7 @@ function board_(e) {
   let rem = st.time, run = st.running;
   if (run) { rem = Math.max(0, st.time - (Date.now() - st.t0) / 1000); if (rem <= 0) run = false; }
   return {
-    st: { info: st.info, mid: st.mid, rd: st.rd, done: st.done, final: st.final, pts: st.pts, kd: st.kd, w: st.w, m: st.m },
+    st: { info: st.info, mid: st.mid, rd: st.rd, rest: !!st.rest, done: st.done, final: st.final, pts: st.pts, kd: st.kd, w: st.w, m: st.m },
     rem: rem, running: run, v: verdict_(st),
     tot: [0, 1, 2].map(j => ({ r: tot_(st, j, 'r'), b: tot_(st, j, 'b') }))
   };
@@ -226,7 +226,7 @@ function doAct_(s, type, p) {
     if (type === 'addMatch') {
       if (!p.merah || !p.biru) throw new Error('Nama merah dan biru wajib diisi');
       const no = rows_('Matches').filter(m => m.eventId === e).length + 1;
-      sh_('Matches').appendRow([e, no, p.merah, p.biru, p.kelas || '', p.aturan || 'K-1', +p.rounds || 3, +p.dur || 120, 'menunggu', '']);
+      sh_('Matches').appendRow([e, no, p.merah, p.biru, p.kelas || '', p.aturan || 'K-1', +p.rounds || 3, +p.dur || 120, 'menunggu', '', p.rest === '' || p.rest === undefined ? 60 : +p.rest]);
       return { msg: 'Partai ' + no + ' ditambahkan' };
     }
     if (type === 'activate' || type === 'reset') {
@@ -251,6 +251,7 @@ function doAct_(s, type, p) {
   if (/^j[123]$/.test(R)) {
     if (type !== 'pt') throw new Error('Tidak diizinkan');
     if (st.done) throw new Error('Pertandingan sudah diakhiri');
+    if (st.rest) throw new Error('Sedang istirahat');
     const j = +R[1] - 1;
     if (st.pts[st.rd][j][side] + d < 0) return { board: board_(e) };
     st.pts[st.rd][j][side] += d;
@@ -261,10 +262,12 @@ function doAct_(s, type, p) {
     if (p.a === 'toggle' && !st.done) {
       if (st.running) st.running = false; else if (st.time > 0) { st.running = true; st.t0 = Date.now(); }
     } else if (p.a === 'adj' && !st.running && !st.done) {
-      st.time = Math.max(0, Math.min(st.info.dur, st.time + d));
+      st.time = Math.max(0, Math.min(st.rest ? (st.info.rest || 60) : st.info.dur, st.time + d));
     } else if (p.a === 'next' && !st.done) {
-      st.running = false;
+      st.running = false; st.rest = false;
       if (st.rd + 1 < st.info.rounds) { st.rd++; st.time = st.info.dur; } else st.done = true;
+    } else if (p.a === 'rest' && !st.done && !st.rest && st.time <= 0 && st.rd + 1 < st.info.rounds) {
+      st.rest = true; st.time = st.info.rest || 60; st.running = true; st.t0 = Date.now();
     }
     log_(e, st, R, 'timer', '', p.a);
   } else if (R === 'hakim') {

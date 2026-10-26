@@ -100,6 +100,12 @@ details summary{cursor:pointer;color:var(--mu)}
 #jv .box button{padding:14px;font-weight:700;font-size:16px;border-radius:10px}
 body.jmode #msg{position:fixed;left:12px;right:12px;bottom:110px;z-index:60;background:rgba(0,0,0,.85);color:#fff;padding:10px;border-radius:8px;text-align:center}
 body.jmode #msg:empty{display:none}
+.tk{max-width:560px;margin:0 auto;text-align:center}
+.tkinfo{color:var(--mu);font-weight:700;margin:6px 0 10px}
+.tkclock{font:400 clamp(72px,22vw,170px)/1 "Archivo Black",Archivo,Arial,sans-serif;background:#0d1017;color:#f4f6fa;border-radius:16px;padding:18px 8px;font-variant-numeric:tabular-nums}
+.tkclock.low{color:#ffcf3f}
+.tkbtns{display:grid;gap:12px;margin-top:14px}
+.tkbtns button{padding:18px;font-size:19px;font-weight:700;border-radius:14px}
 </style>
 </head>
 <body>
@@ -235,12 +241,14 @@ function openOwnEv(id){call("openOwn",[U.token,id],startSession)}
 /* Sesi event */
 function isJ(){return ME&&/^j[123]$/.test(ME.role)}
 function enter(){
-  show("app");$("who").textContent=RN[ME.role]+" · Event "+ME.kode;B=null;
-  if(isJ()){$("app").hidden=true;$("ctl").innerHTML="";buildJudge();drawJudge()}else{buildCtl();drawBoard()}
+  show("app");$("who").textContent=RN[ME.role]+" · Event "+ME.kode;B=null;$("board").hidden=false;
+  if(isJ()){$("app").hidden=true;$("ctl").innerHTML="";buildJudge();drawJudge()}
+  else if(ME.role=="timer"){$("board").hidden=true;buildTimer();drawTimer()}
+  else{buildCtl();drawBoard()}
   poll()
 }
 function poll(){if(!ME||polling)return;polling=true;call("getBoard",[T],function(b){polling=false;if(pend>0)return;apply(b)})}
-function apply(b){if(!ME)return;B=b;fAt=Date.now();if(isJ())drawJudge();else{drawBoard();drawCtl()}}
+function apply(b){if(!ME)return;B=b;fAt=Date.now();if(isJ())drawJudge();else if(ME.role=="timer")drawTimer();else{drawBoard();drawCtl()}}
 function act(type,p,after){call("act",[T,type,p||{}],function(r){
   if(r&&r.board)apply(r.board);if(r&&r.msg)toast(r.msg);if(after)after(r)})}
 
@@ -261,16 +269,16 @@ function drawBoard(){
   else if(st.done)res="<div class='res'>Pertandingan selesai, menunggu pengesahan dewan hakim</div>";
   else res="<div class='res'>Sementara: "+(v.side?esc(nm(v.side))+" unggul ("+esc(v.type)+")":"seri")+"</div>";
   el.innerHTML=
-   "<div class='top'><span>"+esc(st.info.aturan)+", partai "+esc(st.mid)+"</span><span>"+esc(st.info.kelas)+"</span><span>Ronde "+(st.rd+1)+" dari "+st.info.rounds+"</span></div>"+
+   "<div class='top'><span>"+esc(st.info.aturan)+", partai "+esc(st.mid)+"</span><span>"+esc(st.info.kelas)+"</span><span>Ronde "+(st.rd+1)+" dari "+st.info.rounds+(st.rest?" · Istirahat":"")+"</span></div>"+
    "<div class='names'><div class='n r'>"+esc(st.info.merah)+"</div><div class='clock' id='clk'>"+fmt(remain())+"</div><div class='n b'>"+esc(st.info.biru)+"</div></div>"+
    "<div class='pen'><div>Knockdown <b>"+kdSum("r")+"</b> · Peringatan <b>"+st.w.r+"</b> · Poin minus <b>"+st.m.r+"</b></div><div>Knockdown <b>"+kdSum("b")+"</b> · Peringatan <b>"+st.w.b+"</b> · Poin minus <b>"+st.m.b+"</b></div></div>"+
    "<div class='mid'><div class='votes'><b class='vr'>"+v.r+"</b></div><div>"+jrow(0)+jrow(1)+jrow(2)+"</div><div class='votes'><b class='vb'>"+v.b+"</b></div></div>"+res
 }
 function beep(){try{var c=new (window.AudioContext||window.webkitAudioContext)(),o=c.createOscillator();o.frequency.value=880;o.connect(c.destination);o.start();setTimeout(function(){o.stop();c.close()},700)}catch(e){}}
 setInterval(function(){
-  if(isJ())drawJudge();if(!B||B.empty)return;var r=remain(),c=$("clk");
+  if(isJ())drawJudge();if(ME&&ME.role=="timer")drawTimer();if(!B||B.empty)return;var r=remain(),c=$("clk");
   if(c){c.textContent=fmt(r);c.className="clock"+(r<=10?" low":"")}
-  var k=B.st.mid+"-"+B.st.rd;
+  var k=B.st.mid+"-"+B.st.rd+(B.st.rest?"r":"");
   if(B.running&&r<=0&&beeped!==k&&ME&&(ME.role=="timer"||ME.role=="monitor")){beeped=k;beep()}
 },250);
 setInterval(poll,2000);
@@ -279,7 +287,34 @@ setInterval(poll,2000);
 function sideBtns(label,fn){return["r","b"].map(function(s){return"<button onclick='"+fn+"(\""+s+"\",1)'>"+label+" +1 "+(s=="r"?"merah":"biru")+"</button><button onclick='"+fn+"(\""+s+"\",-1)'>-1</button>"}).join(" ")}
 function jp(s,d){act("pt",{s:s,d:d})}
 function hk(k,s,d){act(k,{s:s,d:d})}
-function tm(a,d){act("timer",{a:a,d:d})}
+function tm(a,d){
+  if(a=="toggle"&&B&&!B.empty){if(B.running){B.rem=remain();B.running=false}else if(remain()>0){B.running=true;fAt=Date.now()}drawTimer()}
+  pend++;call("act",[T,"timer",{a:a,d:d}],function(r){pend--;if(pend===0&&r&&r.board)apply(r.board)},function(){pend--;poll()})
+}
+function tkNext(){
+  if(!B||B.empty)return;
+  if(!B.st.rest&&remain()>0&&!confirm("Waktu ronde belum habis. Tetap lanjut?"))return;
+  tm("next")
+}
+function buildTimer(){
+  $("ctl").innerHTML="<div class='tk'><div class='tkinfo' id='tkI'></div><div class='tkclock' id='tkC'>--:--</div>"+
+   "<div class='tkbtns'><button class='gold' id='tkT' onclick='tm(\"toggle\")'>Mulai</button>"+
+   "<button id='tkN' onclick='tkNext()'>Ronde berikutnya</button>"+
+   "<button id='tkR' onclick='tm(\"rest\")'>Mulai istirahat</button></div></div>"
+}
+function drawTimer(){
+  if(!$("tkT"))return;
+  var st=B&&!B.empty?B.st:null,t=$("tkT"),n=$("tkN"),rb=$("tkR");
+  if(!st){$("tkI").textContent="Belum ada partai aktif";$("tkC").textContent="--:--";t.disabled=n.disabled=rb.disabled=true;return}
+  var r=remain(),run=B.running&&r>0,over=st.done||st.final,rest=st.rest,total=rest?(st.info.rest||60):st.info.dur;
+  $("tkI").textContent=over?"Pertandingan selesai":(rest?"Istirahat setelah ronde "+(st.rd+1):"Ronde "+(st.rd+1)+" dari "+st.info.rounds);
+  var c=$("tkC");c.textContent=fmt(r);c.className="tkclock"+(r<=10&&!over?" low":"");
+  t.textContent=r<=0?"Waktu habis":run?"Stop":(r>=total-0.5&&!rest?"Mulai":"Lanjutkan waktu");
+  t.disabled=over||r<=0;
+  n.textContent=(!rest&&st.rd+1>=st.info.rounds)?"Akhiri pertandingan":"Ronde berikutnya";n.disabled=over;
+  rb.textContent=rest?"Sedang istirahat":"Mulai istirahat";
+  rb.disabled=over||rest||run||r>0||st.rd+1>=st.info.rounds
+}
 function buildCtl(){
   var R=ME.role,h="";
   
@@ -287,7 +322,7 @@ function buildCtl(){
     $("ctl").innerHTML="<div class='card'><h2>Tambah partai</h2><div class='grid'>"+
      "<label>Sudut merah<input id='am'></label><label>Sudut biru<input id='ab'></label><label>Kelas<input id='ak' placeholder='-67 kg'></label>"+
      "<label>Aturan<select id='au'><option>K-1</option><option>Low Kick</option><option>Full Contact</option></select></label>"+
-     "<label>Jumlah ronde<input id='ar' type='number' min='1' max='12' value='3'></label><label>Durasi ronde (detik)<input id='ad' type='number' min='10' step='10' value='120'></label></div>"+
+     "<label>Jumlah ronde<input id='ar' type='number' min='1' max='12' value='3'></label><label>Durasi ronde (detik)<input id='ad' type='number' min='10' step='10' value='120'></label><label>Istirahat (detik)<input id='as' type='number' min='0' step='10' value='60'></label></div>"+
      "<div class='row' style='margin-top:8px'><button class='pri' onclick='addM()'>Tambah partai</button></div></div>"+
      "<div class='card'><h2>Daftar partai</h2><div id='ml'>Memuat...</div><div class='row' style='margin-top:8px'><button onclick='if(confirm(\"Reset semua skor partai aktif?\"))act(\"reset\")'>Reset skor partai aktif</button></div></div>";
     loadM();return
@@ -303,9 +338,6 @@ function drawCtl(){
     var j=+R[1]-1,p=st.pts[st.rd][j];
     h="<h2>Pengontrol "+RN[R]+" - ronde ini "+p.r+" : "+p.b+"</h2><div class='pad'><div class='bt'><button class='p rb' onclick='jp(\"r\",1)'>+1 Merah</button><button class='p bb' onclick='jp(\"b\",1)'>+1 Biru</button></div>"+
       "<div class='m'><button onclick='jp(\"r\",-1)'>-1 Merah</button><button onclick='jp(\"b\",-1)'>-1 Biru</button></div></div><div class='kb'>Satu tombol = satu teknik sah. Gunakan -1 untuk koreksi.</div>"
-  }else if(R=="timer"){
-    h="<h2>Timekeeper</h2><div class='row'><button class='pri' onclick='tm(\"toggle\")'>"+(B.running?"Jeda":"Mulai")+"</button><button onclick='tm(\"adj\",-10)'>-10 detik</button><button onclick='tm(\"adj\",10)'>+10 detik</button>"+
-      "<button onclick='tm(\"next\")'>"+(st.rd+1<st.info.rounds?"Ronde berikutnya":"Akhiri pertandingan")+"</button></div>"
   }else if(R=="hakim"){
     h="<h2>Dewan hakim</h2><div class='pn'>"+["r","b"].map(function(s){return"<div class='side "+s+"'><b>"+esc(nm(s))+"</b>"+
       "<div>Knockdown "+kdSum(s)+" <button onclick='hk(\"kd\",\""+s+"\",1)'>+</button><button onclick='hk(\"kd\",\""+s+"\",-1)'>-</button></div>"+
@@ -321,7 +353,7 @@ function drawCtl(){
 /* Layar juri: layar penuh, hanya input poin */
 function jState(){
   if(!B||B.empty)return"Menunggu partai diaktifkan";
-  var st=B.st;if(st.final)return"Hasil disahkan";if(st.done)return"Pertandingan selesai";
+  var st=B.st;if(st.final)return"Hasil disahkan";if(st.done)return"Pertandingan selesai";if(st.rest)return"Istirahat";
   var r=remain();if(B.running&&r>0)return"";
   if(r<=0)return"Ronde "+(st.rd+1)+" selesai";
   if(r>=st.info.dur-0.5)return"Menunggu ronde dimulai";
@@ -356,7 +388,7 @@ function jMenu(on){$("jvM").hidden=!on}
 function fs(){try{var e=document.documentElement;if(document.fullscreenElement)document.exitFullscreen();else if(e.requestFullscreen)e.requestFullscreen()}catch(x){}}
 
 /* Admin */
-function addM(){act("addMatch",{merah:$("am").value,biru:$("ab").value,kelas:$("ak").value,aturan:$("au").value,rounds:$("ar").value,dur:$("ad").value},function(){$("am").value="";$("ab").value="";loadM()})}
+function addM(){act("addMatch",{merah:$("am").value,biru:$("ab").value,kelas:$("ak").value,aturan:$("au").value,rounds:$("ar").value,dur:$("ad").value,rest:$("as").value},function(){$("am").value="";$("ab").value="";loadM()})}
 function loadM(){call("getMatches",[T],function(l){
   $("ml").innerHTML=l.length?"<table><tr><th>No</th><th>Merah</th><th>Biru</th><th>Kelas</th><th>Status</th><th></th></tr>"+l.map(function(m){
     return"<tr><td>"+m.no+"</td><td>"+esc(m.merah)+"</td><td>"+esc(m.biru)+"</td><td>"+esc(m.kelas)+"</td><td>"+esc(m.status)+(m.hasil?"<br><small>"+esc(m.hasil)+"</small>":"")+"</td><td>"+
