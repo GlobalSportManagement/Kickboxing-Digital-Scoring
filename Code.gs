@@ -89,6 +89,7 @@ function me(token) {
 // Gabung ke event: kode event + PIN peran. Akun Google opsional (hanya untuk riwayat).
 function join(token, kode, pin) {
   kode = String(kode || '').trim(); pin = String(pin || '').trim();
+  if (!kode) throw new Error('Kode event wajib diisi');
   const ev = rows_('Events').find(x => String(x.kode) === kode);
   if (!ev) throw new Error('Kode event tidak ditemukan');
   const role = ROLES.find(r => String(ev[r]) === pin);
