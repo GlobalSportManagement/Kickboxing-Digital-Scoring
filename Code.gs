@@ -8,7 +8,7 @@ const FOLDER_ID = '12Pw5Bsb8SBntE9z_bYAxzASg-a59elfl';
 const ROLES = ['admin', 'j1', 'j2', 'j3', 'timer', 'hakim', 'monitor'];
 const HEAD = {
   Events: ['id', 'nama', 'tanggal', 'admin', 'j1', 'j2', 'j3', 'timer', 'hakim', 'monitor', 'folderId', 'recapId', 'kode', 'pemilik', 'dibuat'],
-  Matches: ['eventId', 'no', 'merah', 'biru', 'kelas', 'aturan', 'rounds', 'dur', 'status', 'hasil', 'rest'],
+  Matches: ['eventId', 'no', 'merah', 'biru', 'kelas', 'aturan', 'rounds', 'dur', 'status', 'hasil', 'rest', 'timMerah', 'timBiru'],
   Live: ['eventId', 'json'],
   Log: ['waktu', 'eventId', 'partai', 'peran', 'jenis', 'sisi', 'nilai'],
   Riwayat: ['waktu', 'email', 'eventId', 'nama', 'kode', 'peran']
@@ -161,7 +161,7 @@ function init_(m) {
   const n = +m.rounds || 3, dur = +m.dur || 120, pts = [], kd = [];
   for (let i = 0; i < n; i++) { pts.push([{ r: 0, b: 0 }, { r: 0, b: 0 }, { r: 0, b: 0 }]); kd.push({ r: 0, b: 0 }); }
   return {
-    mid: m.no, info: { merah: m.merah, biru: m.biru, kelas: m.kelas, aturan: m.aturan, rounds: n, dur: dur, rest: +m.rest >= 0 && m.rest !== '' ? +m.rest : 60 },
+    mid: m.no, info: { merah: m.merah, biru: m.biru, kelas: m.kelas, aturan: m.aturan, rounds: n, dur: dur, rest: +m.rest >= 0 && m.rest !== '' ? +m.rest : 60, timMerah: String(m.timMerah || ''), timBiru: String(m.timBiru || '') },
     rest: false, rd: 0, time: dur, running: false, t0: 0, done: false, final: false, pts: pts, kd: kd,
     w: { r: 0, b: 0 }, m: { r: 0, b: 0 }
   };
@@ -200,7 +200,7 @@ function board_(e) {
   let rem = st.time, run = st.running;
   if (run) { rem = Math.max(0, st.time - (Date.now() - st.t0) / 1000); if (rem <= 0) run = false; }
   return {
-    st: { info: st.info, mid: st.mid, rd: st.rd, rest: !!st.rest, done: st.done, final: st.final, pts: st.pts, kd: st.kd, w: st.w, m: st.m },
+    st: { info: st.info, mid: st.mid, rd: st.rd, rest: !!st.rest, nama: st.nama || '', done: st.done, final: st.final, pts: st.pts, kd: st.kd, w: st.w, m: st.m },
     rem: rem, running: run, v: verdict_(st),
     tot: [0, 1, 2].map(j => ({ r: tot_(st, j, 'r'), b: tot_(st, j, 'b') }))
   };
@@ -226,7 +226,7 @@ function doAct_(s, type, p) {
     if (type === 'addMatch') {
       if (!p.merah || !p.biru) throw new Error('Nama merah dan biru wajib diisi');
       const no = rows_('Matches').filter(m => m.eventId === e).length + 1;
-      sh_('Matches').appendRow([e, no, p.merah, p.biru, p.kelas || '', p.aturan || 'K-1', +p.rounds || 3, +p.dur || 120, 'menunggu', '', p.rest === '' || p.rest === undefined ? 60 : +p.rest]);
+      sh_('Matches').appendRow([e, no, p.merah, p.biru, p.kelas || '', p.aturan || 'K-1', +p.rounds || 3, +p.dur || 120, 'menunggu', '', p.rest === '' || p.rest === undefined ? 60 : +p.rest, p.timMerah || '', p.timBiru || '']);
       return { msg: 'Partai ' + no + ' ditambahkan' };
     }
     if (type === 'activate' || type === 'reset') {
@@ -238,7 +238,9 @@ function doAct_(s, type, p) {
         const old = rows_('Matches').find(x => x.eventId === e && +x.no === +live.mid);
         if (old && old.status === 'berjalan') sh_('Matches').getRange(old._row, 9).setValue('menunggu');
       }
-      setLive_(e, init_(m));
+      const ns = init_(m);
+      ns.nama = (rows_('Events').find(x => x.id === e) || {}).nama || '';
+      setLive_(e, ns);
       sh_('Matches').getRange(m._row, 9, 1, 2).setValues([['berjalan', '']]);
       log_(e, { mid: no }, R, type);
       return { board: board_(e), msg: type === 'reset' ? 'Skor partai direset' : 'Partai ' + no + ' aktif' };

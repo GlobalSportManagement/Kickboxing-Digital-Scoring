@@ -106,6 +106,34 @@ body.jmode #msg:empty{display:none}
 .tkclock.low{color:#ffcf3f}
 .tkbtns{display:grid;gap:12px;margin-top:14px}
 .tkbtns button{padding:18px;font-size:19px;font-weight:700;border-radius:14px}
+#tv{position:fixed;inset:0;z-index:50;overflow:hidden;background:linear-gradient(135deg,#0a1a4a 0%,#0e1736 45%,#3a0f12 100%);color:#fff;padding:2.2vw 3vw;display:flex;flex-direction:column}
+#tv[hidden]{display:none}
+#tvbody{display:flex;flex-direction:column;gap:1.3vw;height:100%}
+.tvban{background:#000;text-align:center;font:italic 400 4.4vw/1.15 "Archivo Black",Archivo,Arial,sans-serif;padding:.9vw 7vw;min-height:7vw;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.tvbox{border:.3vw solid #F0B400;background:linear-gradient(180deg,#000,#160a0a);display:flex;justify-content:space-between;align-items:center;padding:.8vw 3vw}
+.tvr{font:400 5vw/1.05 "Archivo Black",Archivo,Arial,sans-serif;color:#F0B400}
+.tvsub{color:#F0B400;font-weight:700;font-size:2.2vw}
+.tvclock{font:400 11vw/1 "Archivo Black",Archivo,Arial,sans-serif;color:#F0B400;font-variant-numeric:tabular-nums}
+.tvrow{flex:1;display:flex;align-items:center;gap:1.6vw;padding:.8vw 2vw;border-radius:.2vw}
+.tvrow.r{background:#c8102e}.tvrow.b{background:#143a8c}
+.tvid{flex:1;min-width:0}
+.tvteam{font:400 2.6vw/1.1 "Archivo Black",Archivo,Arial,sans-serif;opacity:.95}
+.tvname{font:400 4.6vw/1.1 "Archivo Black",Archivo,Arial,sans-serif;overflow-wrap:anywhere}
+.tvstat{font-weight:700;font-size:1.5vw;opacity:.85;margin-top:.3vw}
+.tvsc{display:flex;gap:1vw}
+.tvc{width:8.4vw;background:rgba(0,0,0,.38);border-radius:.8vw;text-align:center;padding:.5vw 0 .7vw}
+.tvc small{display:block;font-weight:800;font-size:1.6vw;opacity:.75}
+.tvc b{display:block;font:400 6.2vw/1.05 "Archivo Black",Archivo,Arial,sans-serif;font-variant-numeric:tabular-nums}
+.tvc.lead b{color:#F0B400}
+.tvwin.ph{visibility:hidden}
+.tvc.vt{background:rgba(240,180,0,.22);border:.2vw solid #F0B400}
+.tvwin{background:#F0B400;color:#12204A;font:400 4.2vw/1 "Archivo Black",Archivo,Arial,sans-serif;padding:1vw 2.2vw;border-radius:1vw}
+.tvfoot{border-top:.3vw solid #F0B400;background:#150d0a;text-align:center;font-weight:700;font-size:1.8vw;padding:.8vw;color:#f1e6cf}
+.tvmsg{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font:400 4vw/1.2 "Archivo Black",Archivo,Arial,sans-serif;color:#F0B400}
+.tvbtn{position:absolute;top:1vw;left:1.2vw;z-index:3;background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:99px;padding:.6vw 1.6vw;font-weight:700;font-size:1.6vw;opacity:.7}
+.tvlogo{position:absolute;top:.8vw;right:1.2vw;width:6.4vw;height:6.4vw;object-fit:contain;z-index:3;border-radius:1vw}
+body.tvmode #msg{position:fixed;left:12px;right:12px;bottom:12px;z-index:60;background:rgba(0,0,0,.85);color:#fff;padding:10px;border-radius:8px;text-align:center}
+body.tvmode #msg:empty{display:none}
 </style>
 </head>
 <body>
@@ -135,12 +163,13 @@ body.jmode #msg:empty{display:none}
 <div id="hist" class="menu" hidden></div>
 
 <div id="app" hidden>
-  <div class="row" style="justify-content:space-between;margin-bottom:8px"><b id="who"></b><button onclick="leave()">Tutup event</button></div>
+  <div class="row" style="justify-content:space-between;margin-bottom:8px"><b id="who"></b><span class="row"><button id="tvb" onclick="openTV()">Layar TV &#8599;</button><button onclick="leave()">Tutup event</button></span></div>
   <div id="board" aria-live="polite"></div>
   <div id="ctl"></div>
 </div>
 
 <div id="jv" hidden></div>
+<div id="tv" hidden></div>
 <div class="foot">© 2026 Global Sport Management · Kickboxing Digital Scoring</div>
 
 <script>
@@ -148,7 +177,7 @@ var $=function(i){return document.getElementById(i)};
 /* Alamat web app Apps Script - dipakai saat dibuka dari GitHub Pages */
 var API_URL="https://script.google.com/macros/s/AKfycbzHpY8_7raR_4JYRKp2W1I9Bty2kfo_OVroUHgemkh5iDLux5onSgLPJfAHTM0p3UvG/exec";
 var hasGS=(typeof google!=="undefined"&&google.script&&google.script.run);
-var pend=0,T=null,ME=null,U=null,LAST=null,B=null,fAt=0,polling=false,beeped="",resuming=false;
+var TVMODE=false,pend=0,T=null,ME=null,U=null,LAST=null,B=null,fAt=0,polling=false,beeped="",resuming=false;
 var RN={admin:"Admin",j1:"Juri 1",j2:"Juri 2",j3:"Juri 3",timer:"Timekeeper",hakim:"Dewan hakim",monitor:"Monitor"};
 var ROLES=["admin","j1","j2","j3","timer","hakim","monitor"];
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
@@ -168,6 +197,7 @@ function call(fn,args,ok,bad){
   }else fail("API_URL belum diisi di index.html")
 }
 function expired(){
+  if(TVMODE){$("tvbody").innerHTML="<div class='tvmsg'>Sesi habis. Tutup jendela ini lalu buka Layar TV lagi dari aplikasi.</div>";return}
   if(resuming){resuming=false;var k=LAST&&LAST.kode;LAST=null;ls("kbL",null);showJoin(k);return}
   if(ME){leave();return}
   if(U){U=null;ls("kbU",null);showHome()}
@@ -175,7 +205,7 @@ function expired(){
 function show(v){
   ["home","join","create","hist","app"].forEach(function(x){$(x).hidden=(x!=v)});
   var t=$("ttl");t.className=v=="app"?"":"big";t.textContent=(v=="app"&&ME)?ME.nama:"Kickboxing Digital Scoring";
-  if(v!="app"){$("jv").hidden=true;document.body.classList.remove("jmode");document.body.style.overflow=""}
+  if(v!="app"){$("jv").hidden=true;$("tv").hidden=true;document.body.classList.remove("jmode","tvmode");document.body.style.overflow=""}
   window.scrollTo(0,0)
 }
 
@@ -241,14 +271,15 @@ function openOwnEv(id){call("openOwn",[U.token,id],startSession)}
 /* Sesi event */
 function isJ(){return ME&&/^j[123]$/.test(ME.role)}
 function enter(){
-  show("app");$("who").textContent=RN[ME.role]+" · Event "+ME.kode;B=null;$("board").hidden=false;
+  show("app");$("who").textContent=RN[ME.role]+" · Event "+ME.kode;B=null;$("board").hidden=false;$("tvb").hidden=hasGS;
   if(isJ()){$("app").hidden=true;$("ctl").innerHTML="";buildJudge();drawJudge()}
+  else if(isTV()){$("app").hidden=true;buildTV()}
   else if(ME.role=="timer"){$("board").hidden=true;buildTimer();drawTimer()}
   else{buildCtl();drawBoard()}
   poll()
 }
 function poll(){if(!ME||polling)return;polling=true;call("getBoard",[T],function(b){polling=false;if(pend>0)return;apply(b)})}
-function apply(b){if(!ME)return;B=b;fAt=Date.now();if(isJ())drawJudge();else if(ME.role=="timer")drawTimer();else{drawBoard();drawCtl()}}
+function apply(b){if(!ME)return;B=b;fAt=Date.now();if(isJ())drawJudge();else if(isTV())drawTV();else if(ME.role=="timer")drawTimer();else{drawBoard();drawCtl()}}
 function act(type,p,after){call("act",[T,type,p||{}],function(r){
   if(r&&r.board)apply(r.board);if(r&&r.msg)toast(r.msg);if(after)after(r)})}
 
@@ -276,7 +307,7 @@ function drawBoard(){
 }
 function beep(){try{var c=new (window.AudioContext||window.webkitAudioContext)(),o=c.createOscillator();o.frequency.value=880;o.connect(c.destination);o.start();setTimeout(function(){o.stop();c.close()},700)}catch(e){}}
 setInterval(function(){
-  if(isJ())drawJudge();if(ME&&ME.role=="timer")drawTimer();if(!B||B.empty)return;var r=remain(),c=$("clk");
+  if(isJ())drawJudge();if(isTV())tvClock();if(ME&&ME.role=="timer")drawTimer();if(!B||B.empty)return;var r=remain(),c=$("clk");
   if(c){c.textContent=fmt(r);c.className="clock"+(r<=10?" low":"")}
   var k=B.st.mid+"-"+B.st.rd+(B.st.rest?"r":"");
   if(B.running&&r<=0&&beeped!==k&&ME&&(ME.role=="timer"||ME.role=="monitor")){beeped=k;beep()}
@@ -320,7 +351,7 @@ function buildCtl(){
   
   if(R=="admin"){
     $("ctl").innerHTML="<div class='card'><h2>Tambah partai</h2><div class='grid'>"+
-     "<label>Sudut merah<input id='am'></label><label>Sudut biru<input id='ab'></label><label>Kelas<input id='ak' placeholder='-67 kg'></label>"+
+     "<label>Sudut merah<input id='am'></label><label>Sudut biru<input id='ab'></label><label>Kelas<input id='ak' placeholder='-67 kg'></label><label>Kontingen merah<input id='at1'></label><label>Kontingen biru<input id='at2'></label>"+
      "<label>Aturan<select id='au'><option>K-1</option><option>Low Kick</option><option>Full Contact</option></select></label>"+
      "<label>Jumlah ronde<input id='ar' type='number' min='1' max='12' value='3'></label><label>Durasi ronde (detik)<input id='ad' type='number' min='10' step='10' value='120'></label><label>Istirahat (detik)<input id='as' type='number' min='0' step='10' value='60'></label></div>"+
      "<div class='row' style='margin-top:8px'><button class='pri' onclick='addM()'>Tambah partai</button></div></div>"+
@@ -350,6 +381,48 @@ function drawCtl(){
   }
   c.innerHTML=h
 }
+/* Layar TV / proyektor (peran Monitor, atau jendela terpisah dari tombol Layar TV) */
+function isTV(){return ME&&(ME.role=="monitor"||TVMODE)}
+function openTV(){
+  var w=window.open(location.href.split("#")[0]+"#tv="+encodeURIComponent(T),"kbTV","width=1280,height=720");
+  if(!w)toast("Pop-up diblokir. Izinkan pop-up untuk situs ini, lalu coba lagi.",1)
+}
+function startTV(t){TVMODE=true;T=t;ME={role:"monitor",nama:"",kode:"",e:""};$("ttl").hidden=true;$("home").hidden=true;$("app").hidden=true;buildTV();poll()}
+function buildTV(){
+  var v=$("tv");v.hidden=false;document.body.classList.add("tvmode");document.body.style.overflow="hidden";
+  v.innerHTML=(TVMODE?"<button class='tvbtn' onclick='fs()'>Layar penuh</button>":"<button class='tvbtn' onclick='leave()'>&lsaquo; Kembali</button>")+
+   "<img class='tvlogo' src='icon-192.png' alt='' onerror=\"this.style.display='none'\"><div id='tvbody'></div>";
+  v.ondblclick=fs;drawTV()
+}
+function tvStatus(r){
+  var st=B.st;if(st.final||st.done)return"Selesai";
+  if(st.rest)return r<=0?"Istirahat selesai":(B.running?"Setelah ronde "+(st.rd+1):"Dijeda · setelah ronde "+(st.rd+1));
+  if(B.running&&r>0)return"Berjalan";if(r<=0)return"Selesai";
+  return r>=st.info.dur-0.5?"Siap":"Dijeda"
+}
+function tvClock(){
+  if(!B||B.empty)return;var c=$("tvclk");if(!c)return;var r=remain();
+  c.textContent=fmt(r);var s=$("tvsub");if(s)s.textContent=tvStatus(r)
+}
+function drawTV(){
+  var el=$("tvbody");if(!el)return;
+  if(!B||B.empty){el.innerHTML="<div class='tvban'>"+esc(ME.nama||"Kickboxing Digital Scoring")+"</div><div class='tvmsg'>Menunggu partai diaktifkan</div>";return}
+  var st=B.st,v=B.v,fin=st.final;
+  function row(s){
+    var o=s=="r"?"b":"r",c="",j,team=s=="r"?st.info.timMerah:st.info.timBiru,name=s=="r"?st.info.merah:st.info.biru;
+    for(j=0;j<3;j++){var a=B.tot[j][s],b=B.tot[j][o];c+="<div class='tvc"+(a>b?" lead":"")+"'><small>J"+(j+1)+"</small><b>"+a+"</b></div>"}
+    c+="<div class='tvc vt'><small>JURI</small><b>"+(s=="r"?v.r:v.b)+"</b></div>";
+    return"<div class='tvrow "+s+"'><div class='tvid'>"+(team?"<div class='tvteam'>"+esc(team)+"</div>":"")+"<div class='tvname'>"+esc(name)+"</div>"+
+     "<div class='tvstat'>KD "+kdSum(s)+" · Peringatan "+st.w[s]+" · Minus "+st.m[s]+"</div></div><div class='tvsc'>"+c+"</div>"+"<div class='tvwin"+(fin&&v.side==s?"":" ph")+"'>WIN</div>"+"</div>"
+  }
+  var foot="Partai "+esc(st.mid)+" · "+esc(st.info.aturan)+(st.info.kelas?" · "+esc(st.info.kelas):"");
+  if(fin)foot=(v.side?"Keputusan: "+esc(v.type):"Seri penuh")+" · Juri "+v.r+"-"+v.b+(v.d?" (seri "+v.d+")":"")+"  |  "+foot;
+  el.innerHTML="<div class='tvban'>"+esc(st.nama||ME.nama||"Kickboxing Digital Scoring")+"</div>"+
+   "<div class='tvbox'><div><div class='tvr'>"+(st.rest?"ISTIRAHAT":"RONDE "+(st.rd+1))+"</div><div class='tvsub' id='tvsub'></div></div><div class='tvclock' id='tvclk'>0:00</div></div>"+
+   row("r")+row("b")+"<div class='tvfoot'>"+foot+"</div>";
+  tvClock()
+}
+
 /* Layar juri: layar penuh, hanya input poin */
 function jState(){
   if(!B||B.empty)return"Menunggu partai diaktifkan";
@@ -388,7 +461,7 @@ function jMenu(on){$("jvM").hidden=!on}
 function fs(){try{var e=document.documentElement;if(document.fullscreenElement)document.exitFullscreen();else if(e.requestFullscreen)e.requestFullscreen()}catch(x){}}
 
 /* Admin */
-function addM(){act("addMatch",{merah:$("am").value,biru:$("ab").value,kelas:$("ak").value,aturan:$("au").value,rounds:$("ar").value,dur:$("ad").value,rest:$("as").value},function(){$("am").value="";$("ab").value="";loadM()})}
+function addM(){act("addMatch",{merah:$("am").value,biru:$("ab").value,kelas:$("ak").value,timMerah:$("at1").value,timBiru:$("at2").value,aturan:$("au").value,rounds:$("ar").value,dur:$("ad").value,rest:$("as").value},function(){$("am").value="";$("ab").value="";$("at1").value="";$("at2").value="";loadM()})}
 function loadM(){call("getMatches",[T],function(l){
   $("ml").innerHTML=l.length?"<table><tr><th>No</th><th>Merah</th><th>Biru</th><th>Kelas</th><th>Status</th><th></th></tr>"+l.map(function(m){
     return"<tr><td>"+m.no+"</td><td>"+esc(m.merah)+"</td><td>"+esc(m.biru)+"</td><td>"+esc(m.kelas)+"</td><td>"+esc(m.status)+(m.hasil?"<br><small>"+esc(m.hasil)+"</small>":"")+"</td><td>"+
@@ -396,9 +469,9 @@ function loadM(){call("getMatches",[T],function(l){
 
 /* Mulai */
 if(!hasGS&&"serviceWorker" in navigator&&/^https?:$/.test(location.protocol)){navigator.serviceWorker.register("sw.js").catch(function(){})}
-U=ls("kbU");LAST=ls("kbL");
-showHome();initG();
-if(U)call("me",[U.token],function(){});
+var tvh=location.hash.match(/^#tv=(.+)$/);
+if(tvh){startTV(decodeURIComponent(tvh[1]))}
+else{U=ls("kbU");LAST=ls("kbL");showHome();initG();if(U)call("me",[U.token],function(){})}
 </script>
 </body>
 </html>
