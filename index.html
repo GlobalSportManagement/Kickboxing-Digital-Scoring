@@ -46,10 +46,10 @@ button.pri{background:var(--tx);color:var(--bg);border-color:var(--tx)}
 .jr:first-child{border-top:0}
 .jr .sc{font:700 26px/1 "Arial Narrow",Arial,sans-serif;min-width:1.4em;text-align:center;font-variant-numeric:tabular-nums}
 .jr .lead{background:#262d3d;border-radius:6px}
-.dots{display:grid;grid-template-columns:1fr 1fr;gap:2px;min-height:14px}
-.dots span{display:flex;gap:3px}
+.dots{display:grid;grid-template-columns:1fr 1fr;gap:6px;min-height:28px;align-items:center}
+.dots span{display:flex;gap:6px;flex-wrap:wrap}
 .dots span:first-child{justify-content:flex-end}
-.dots i{width:12px;height:12px;border-radius:50%;display:block}
+.dots i{width:24px;height:24px;border-radius:50%;display:block}
 .dots .dr{background:#ff5b69}.dots .db{background:#6ea0ff}
 .jl{grid-column:1/-1;font-size:12px;color:var(--bmu);margin-bottom:-2px}
 .res{margin-top:10px;padding:10px;border-radius:8px;background:#1a1f2c;text-align:center;font-size:15px}
@@ -109,11 +109,11 @@ body.jmode #msg:empty{display:none}
 #tv{position:fixed;inset:0;z-index:50;overflow:hidden;background:linear-gradient(135deg,#0a1a4a 0%,#0e1736 45%,#3a0f12 100%);color:#fff;padding:2.2vw 3vw;display:flex;flex-direction:column}
 #tv[hidden]{display:none}
 #tvbody{display:flex;flex-direction:column;gap:1.3vw;height:100%}
-.tvban{background:#000;text-align:center;font:italic 400 4.4vw/1.15 "Archivo Black",Archivo,Arial,sans-serif;padding:.9vw 7vw;min-height:7vw;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.tvban{background:#000;text-align:center;font:italic 400 3.8vw/1.15 "Archivo Black",Archivo,Arial,sans-serif;padding:.5vw 7vw;min-height:5.6vw;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .tvbox{border:.3vw solid #F0B400;background:linear-gradient(180deg,#000,#160a0a);display:flex;justify-content:space-between;align-items:center;padding:.8vw 3vw}
-.tvr{font:400 5vw/1.05 "Archivo Black",Archivo,Arial,sans-serif;color:#F0B400}
+.tvr{font:400 4.4vw/1.05 "Archivo Black",Archivo,Arial,sans-serif;color:#F0B400}
 .tvsub{color:#F0B400;font-weight:700;font-size:2.2vw}
-.tvclock{font:400 11vw/1 "Archivo Black",Archivo,Arial,sans-serif;color:#F0B400;font-variant-numeric:tabular-nums}
+.tvclock{font:400 8.6vw/1 "Archivo Black",Archivo,Arial,sans-serif;color:#F0B400;font-variant-numeric:tabular-nums}
 .tvrow{flex:1;display:flex;align-items:center;gap:1.6vw;padding:.8vw 2vw;border-radius:.2vw}
 .tvrow.r{background:#c8102e}.tvrow.b{background:#143a8c}
 .tvid{flex:1;min-width:0}
@@ -123,17 +123,36 @@ body.jmode #msg:empty{display:none}
 .tvsc{display:flex;gap:1vw}
 .tvc{width:8.4vw;background:rgba(0,0,0,.38);border-radius:.8vw;text-align:center;padding:.5vw 0 .7vw}
 .tvc small{display:block;font-weight:800;font-size:1.6vw;opacity:.75}
-.tvc b{display:block;font:400 6.2vw/1.05 "Archivo Black",Archivo,Arial,sans-serif;font-variant-numeric:tabular-nums}
-.tvc.lead b{color:#F0B400}
+.tvc b{display:block;font:400 5.6vw/1.05 "Archivo Black",Archivo,Arial,sans-serif;font-variant-numeric:tabular-nums}
+.tvc{position:relative}
+.tvpips{display:flex;justify-content:center;gap:.5vw;margin-top:.1vw}
+.tvpips i{display:block;width:1.1vw;height:1.1vw;border-radius:50%;border:.15vw solid #F0B400;box-sizing:border-box}
+.tvpips i.on{background:#F0B400}
 .tvwin.ph{visibility:hidden}
 .tvc.vt{background:rgba(240,180,0,.22);border:.2vw solid #F0B400}
 .tvwin{background:#F0B400;color:#12204A;font:400 4.2vw/1 "Archivo Black",Archivo,Arial,sans-serif;padding:1vw 2.2vw;border-radius:1vw}
 .tvfoot{border-top:.3vw solid #F0B400;background:#150d0a;text-align:center;font-weight:700;font-size:1.8vw;padding:.8vw;color:#f1e6cf}
 .tvmsg{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font:400 4vw/1.2 "Archivo Black",Archivo,Arial,sans-serif;color:#F0B400}
-.tvbtn{position:absolute;top:1vw;left:1.2vw;z-index:3;background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:99px;padding:.6vw 1.6vw;font-weight:700;font-size:1.6vw;opacity:.7}
+.tvbtns{position:absolute;top:1vw;left:1.2vw;z-index:3;display:flex;gap:.8vw}
+.tvbtn{background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:99px;padding:.6vw 1.6vw;font-weight:700;font-size:1.6vw;opacity:.7}
 .tvlogo{position:absolute;top:.8vw;right:1.2vw;width:6.4vw;height:6.4vw;object-fit:contain;z-index:3;border-radius:1vw}
 body.tvmode #msg{position:fixed;left:12px;right:12px;bottom:12px;z-index:60;background:rgba(0,0,0,.85);color:#fff;padding:10px;border-radius:8px;text-align:center}
 body.tvmode #msg:empty{display:none}
+.tvb2{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:space-between;background:var(--board);color:var(--btx);border-radius:1vw;padding:1.2vw 2vw}
+#tvbody.tv2{gap:1vw}
+#tvbody.tv2 .tvban{font-size:3.4vw;min-height:5vw;padding:.4vw 7vw}
+.tvb2 .top{font-size:1.4vw}
+.tvb2 .n{font-size:3.4vw;padding:.7vw 1.2vw}
+.tvb2 .clock{font-size:8vw}
+.tvb2 .pen{font-size:1.5vw;margin:.4vw 0}
+.tvb2 .votes b{font-size:11vw}
+.tvb2 .jl{font-size:1.3vw}
+.tvb2 .jr{padding:.3vw 0}
+.tvb2 .jr .sc{font-size:3.2vw}
+.tvb2 .dots{gap:.5vw;min-height:2.6vw}
+.tvb2 .dots span{gap:.5vw}
+.tvb2 .dots i{width:2.3vw;height:2.3vw}
+.tvb2 .res{font-size:2vw;padding:.8vw;margin-top:.4vw}
 </style>
 </head>
 <body>
@@ -286,25 +305,25 @@ function act(type,p,after){call("act",[T,type,p||{}],function(r){
 /* Papan skor */
 function fmt(t){t=Math.ceil(t);var m=Math.floor(t/60),s=t%60;return m+":"+(s<10?"0":"")+s}
 function remain(){return B.running?Math.max(0,B.rem-(Date.now()-fAt)/1000):B.rem}
-function dots(m){var n=Math.min(Math.abs(m),8),h="",i;for(i=0;i<n;i++)h+="<i class='"+(m>0?"dr":"db")+"'></i>";
+function dots(m){var n=Math.min(Math.abs(m),10),h="",i;for(i=0;i<n;i++)h+="<i class='"+(m>0?"dr":"db")+"'></i>";
   return"<div class='dots'><span>"+(m>0?h:"")+"</span><span>"+(m<0?h:"")+"</span></div>"}
 function jrow(j){var a=B.tot[j].r,b=B.tot[j].b;
   return"<div class='jr'><div class='jl'>Juri "+(j+1)+"</div><div class='sc "+(a>b?"lead":"")+"'>"+a+"</div>"+dots(a-b)+"<div class='sc "+(b>a?"lead":"")+"'>"+b+"</div></div>"}
 function kdSum(s){var t=0;B.st.kd.forEach(function(k){t+=k[s]});return t}
 function nm(s){return s=="r"?B.st.info.merah:B.st.info.biru}
-function drawBoard(){
-  var el=$("board");if(!el||el.hidden)return;
-  if(!B||B.empty){el.innerHTML="<div class='top'>Belum ada partai aktif. Menunggu admin mengaktifkan partai.</div>";return}
+function boardHTML(){
+  if(!B||B.empty)return"<div class='top'>Belum ada partai aktif. Menunggu admin mengaktifkan partai.</div>";
   var st=B.st,v=B.v,res;
   if(st.final)res="<div class='res fin'>"+(v.side?"Pemenang: "+esc(nm(v.side))+" ("+(v.side=="r"?"merah":"biru")+") - "+esc(v.type):"Seri penuh, perlu keputusan panitia")+"</div>";
   else if(st.done)res="<div class='res'>Pertandingan selesai, menunggu pengesahan dewan hakim</div>";
   else res="<div class='res'>Sementara: "+(v.side?esc(nm(v.side))+" unggul ("+esc(v.type)+")":"seri")+"</div>";
-  el.innerHTML=
+  return""+
    "<div class='top'><span>"+esc(st.info.aturan)+", partai "+esc(st.mid)+"</span><span>"+esc(st.info.kelas)+"</span><span>Ronde "+(st.rd+1)+" dari "+st.info.rounds+(st.rest?" · Istirahat":"")+"</span></div>"+
    "<div class='names'><div class='n r'>"+esc(st.info.merah)+"</div><div class='clock' id='clk'>"+fmt(remain())+"</div><div class='n b'>"+esc(st.info.biru)+"</div></div>"+
    "<div class='pen'><div>Knockdown <b>"+kdSum("r")+"</b> · Peringatan <b>"+st.w.r+"</b> · Poin minus <b>"+st.m.r+"</b></div><div>Knockdown <b>"+kdSum("b")+"</b> · Peringatan <b>"+st.w.b+"</b> · Poin minus <b>"+st.m.b+"</b></div></div>"+
    "<div class='mid'><div class='votes'><b class='vr'>"+v.r+"</b></div><div>"+jrow(0)+jrow(1)+jrow(2)+"</div><div class='votes'><b class='vb'>"+v.b+"</b></div></div>"+res
 }
+function drawBoard(){var el=$("board");if(!el||el.hidden)return;el.innerHTML=boardHTML()}
 function beep(){try{var c=new (window.AudioContext||window.webkitAudioContext)(),o=c.createOscillator();o.frequency.value=880;o.connect(c.destination);o.start();setTimeout(function(){o.stop();c.close()},700)}catch(e){}}
 setInterval(function(){
   if(isJ())drawJudge();if(isTV())tvClock();if(ME&&ME.role=="timer")drawTimer();if(!B||B.empty)return;var r=remain(),c=$("clk");
@@ -388,9 +407,12 @@ function openTV(){
   if(!w)toast("Pop-up diblokir. Izinkan pop-up untuk situs ini, lalu coba lagi.",1)
 }
 function startTV(t){TVMODE=true;T=t;ME={role:"monitor",nama:"",kode:"",e:""};$("ttl").hidden=true;$("home").hidden=true;$("app").hidden=true;buildTV();poll()}
+function tvS(){return ls("kbTVs")==2?2:1}
+function tvStyle(){ls("kbTVs",tvS()==1?2:1);buildTV()}
 function buildTV(){
   var v=$("tv");v.hidden=false;document.body.classList.add("tvmode");document.body.style.overflow="hidden";
-  v.innerHTML=(TVMODE?"<button class='tvbtn' onclick='fs()'>Layar penuh</button>":"<button class='tvbtn' onclick='leave()'>&lsaquo; Kembali</button>")+
+  v.innerHTML="<div class='tvbtns'>"+(TVMODE?"<button class='tvbtn' onclick='fs()'>Layar penuh</button>":"<button class='tvbtn' onclick='leave()'>&lsaquo; Kembali</button>")+
+   "<button class='tvbtn' onclick='tvStyle()'>Tampilan "+tvS()+": "+(tvS()==1?"Baris":"Papan")+"</button></div>"+
    "<img class='tvlogo' src='icon-192.png' alt='' onerror=\"this.style.display='none'\"><div id='tvbody'></div>";
   v.ondblclick=fs;drawTV()
 }
@@ -406,16 +428,20 @@ function tvClock(){
 }
 function drawTV(){
   var el=$("tvbody");if(!el)return;
+  el.className=tvS()==2?"tv2":"";
   if(!B||B.empty){el.innerHTML="<div class='tvban'>"+esc(ME.nama||"Kickboxing Digital Scoring")+"</div><div class='tvmsg'>Menunggu partai diaktifkan</div>";return}
   var st=B.st,v=B.v,fin=st.final;
+  if(tvS()==2){el.innerHTML="<div class='tvban'>"+esc(st.nama||ME.nama||"Kickboxing Digital Scoring")+"</div><div class='tvb2'>"+boardHTML()+"</div>";return}
   function row(s){
     var o=s=="r"?"b":"r",c="",j,team=s=="r"?st.info.timMerah:st.info.timBiru,name=s=="r"?st.info.merah:st.info.biru;
-    for(j=0;j<3;j++){var a=B.tot[j][s],b=B.tot[j][o];c+="<div class='tvc"+(a>b?" lead":"")+"'><small>J"+(j+1)+"</small><b>"+a+"</b></div>"}
-    c+="<div class='tvc vt'><small>JURI</small><b>"+(s=="r"?v.r:v.b)+"</b></div>";
+    for(j=0;j<3;j++){var a=B.tot[j][s],b=B.tot[j][o];c+="<div class='tvc'><small>J"+(j+1)+"</small><b>"+a+"</b></div>"}
+    var fav=0,k,pips="";for(k=0;k<3;k++)if(B.tot[k][s]>B.tot[k][o])fav++;
+    for(k=0;k<3;k++)pips+="<i"+(k<fav?" class='on'":"")+"></i>";
+    c+="<div class='tvc vt'><small>TOTAL</small><b>"+(B.tot[0][s]+B.tot[1][s]+B.tot[2][s])+"</b><div class='tvpips'>"+pips+"</div></div>";
     return"<div class='tvrow "+s+"'><div class='tvid'>"+(team?"<div class='tvteam'>"+esc(team)+"</div>":"")+"<div class='tvname'>"+esc(name)+"</div>"+
      "<div class='tvstat'>KD "+kdSum(s)+" · Peringatan "+st.w[s]+" · Minus "+st.m[s]+"</div></div><div class='tvsc'>"+c+"</div>"+"<div class='tvwin"+(fin&&v.side==s?"":" ph")+"'>WIN</div>"+"</div>"
   }
-  var foot="Partai "+esc(st.mid)+" · "+esc(st.info.aturan)+(st.info.kelas?" · "+esc(st.info.kelas):"");
+  var foot="Partai "+esc(st.mid)+" · "+esc(st.info.aturan)+(st.info.kelas?" · "+esc(st.info.kelas):"")+"  |  <span style='color:#F0B400'>&#9679;</span> jumlah juri yang unggul";
   if(fin)foot=(v.side?"Keputusan: "+esc(v.type):"Seri penuh")+" · Juri "+v.r+"-"+v.b+(v.d?" (seri "+v.d+")":"")+"  |  "+foot;
   el.innerHTML="<div class='tvban'>"+esc(st.nama||ME.nama||"Kickboxing Digital Scoring")+"</div>"+
    "<div class='tvbox'><div><div class='tvr'>"+(st.rest?"ISTIRAHAT":"RONDE "+(st.rd+1))+"</div><div class='tvsub' id='tvsub'></div></div><div class='tvclock' id='tvclk'>0:00</div></div>"+
