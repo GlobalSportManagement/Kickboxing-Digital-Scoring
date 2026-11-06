@@ -106,6 +106,19 @@ body.jmode #msg:empty{display:none}
 .tkclock.low{color:#ffcf3f}
 .tkbtns{display:grid;gap:12px;margin-top:14px}
 .tkbtns button{padding:18px;font-size:19px;font-weight:700;border-radius:14px}
+.tkl{display:flex;flex-direction:column}
+@media (min-width:600px) and (orientation:landscape){
+  .tk{max-width:none;display:grid;grid-template-columns:1.35fr 1fr;gap:16px;min-height:calc(100dvh - 70px)}
+  .tkl{min-height:0}
+  .tkl .tkinfo{margin:4px 0 10px;font-size:20px}
+  .tkclock{flex:1;display:flex;align-items:center;justify-content:center;font-size:clamp(72px,17vw,260px);padding:8px}
+  .tkbtns{margin-top:0;grid-auto-rows:1fr}
+  .tkbtns button{font-size:clamp(19px,3vw,30px)}
+}
+html{overscroll-behavior-y:contain}
+#ptr{position:fixed;top:0;left:50%;z-index:90;width:40px;height:40px;margin-left:-20px;border-radius:50%;background:var(--card);border:1px solid var(--bd);box-shadow:0 2px 8px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--tx);transform:translateY(-60px);opacity:0;pointer-events:none}
+#ptr.spin span{display:inline-block;animation:ptrs .7s linear infinite}
+@keyframes ptrs{to{transform:rotate(360deg)}}
 #tv{position:fixed;inset:0;z-index:50;overflow:hidden;background:linear-gradient(135deg,#0a1a4a 0%,#0e1736 45%,#3a0f12 100%);color:#fff;padding:2.2vw 3vw;display:flex;flex-direction:column}
 #tv[hidden]{display:none}
 #tvbody{display:flex;flex-direction:column;gap:1.3vw;height:100%}
@@ -365,7 +378,7 @@ function tkNext(){
   tm("next")
 }
 function buildTimer(){
-  $("ctl").innerHTML="<div class='tk'><div class='tkinfo' id='tkI'></div><div class='tkclock' id='tkC'>--:--</div>"+
+  $("ctl").innerHTML="<div class='tk'><div class='tkl'><div class='tkinfo' id='tkI'></div><div class='tkclock' id='tkC'>--:--</div></div>"+
    "<div class='tkbtns'><button class='gold' id='tkT' onclick='tm(\"toggle\")'>Mulai</button>"+
    "<button id='tkN' onclick='tkNext()'>Ronde berikutnya</button>"+
    "<button id='tkR' onclick='tm(\"rest\")'>Mulai istirahat</button></div></div>"
@@ -469,14 +482,20 @@ function drawTV(){
 }
 
 /* Layar juri: layar penuh, hanya input poin */
+function since(){ // detik sejak waktu ronde habis (null bila belum habis)
+  if(!B||B.empty)return null;
+  var e=(Date.now()-fAt)/1000;
+  if(B.ovr!=null)return B.ovr+e;
+  if(B.running&&B.rem-e<=0)return e-B.rem;
+  return null
+}
 function jState(){
   if(!B)return"Memuat...";
   if(B.empty)return"Menunggu partai diaktifkan";
   var st=B.st;if(st.final)return"Hasil disahkan";if(st.done)return"Pertandingan selesai";if(st.rest)return"Istirahat";
-  var r=remain();if(B.running&&r>0)return"";
-  if(r<=0)return"Ronde "+(st.rd+1)+" selesai";
-  if(r>=st.info.dur-0.5)return"Menunggu ronde dimulai";
-  return"Dijeda"
+  var s=since();
+  if(s!==null&&s>(B.grace||10))return"Ronde "+(st.rd+1)+" selesai";
+  return""
 }
 function buildJudge(){
   var v=$("jv");v.hidden=false;document.body.classList.add("jmode");document.body.style.overflow="hidden";
@@ -512,6 +531,40 @@ function loadM(){call("getMatches",[T],function(l){
   $("ml").innerHTML=l.length?"<table><tr><th>No</th><th>Merah</th><th>Biru</th><th>Kelas</th><th>Status</th><th></th></tr>"+l.map(function(m){
     return"<tr><td>"+m.no+"</td><td>"+esc(m.merah)+"</td><td>"+esc(m.biru)+"</td><td>"+esc(m.kelas)+"</td><td>"+esc(m.status)+(m.hasil?"<br><small>"+esc(m.hasil)+"</small>":"")+"</td><td>"+
     (m.status=="selesai"?"":"<button onclick='act(\"activate\",{no:"+m.no+"},loadM)'>Aktifkan</button>")+"</td></tr>"}).join("")+"</table>":"Belum ada partai."})}
+
+/* Tarik ke bawah untuk refresh (HP/tablet). Tidak aktif di layar juri dan monitor. */
+(function(){
+  var el=document.createElement("div");el.id="ptr";el.innerHTML="<span>&#8635;</span>";document.body.appendChild(el);
+  var y0=null,dy=0,TH=80;
+  function ok(t){
+    var b=document.body;
+    if(b.classList.contains("jmode")||b.classList.contains("tvmode")||isTV())return false;
+    if(window.scrollY>0)return false;
+    if(t&&t.closest&&t.closest("input,select,textarea"))return false;
+    return true;
+  }
+  function draw(d){
+    var p=Math.min(d,TH*1.6);
+    el.style.opacity=Math.min(1,d/TH);
+    el.style.transform="translateY("+(p-50)+"px) rotate("+(d*3)+"deg)";
+  }
+  document.addEventListener("touchstart",function(e){
+    y0=(e.touches.length===1&&ok(e.target))?e.touches[0].clientY:null;dy=0;
+  },{passive:true});
+  document.addEventListener("touchmove",function(e){
+    if(y0===null)return;
+    dy=e.touches[0].clientY-y0;
+    if(dy>0&&window.scrollY<=0)draw(dy*0.6);else{dy=0;draw(0)}
+  },{passive:true});
+  document.addEventListener("touchend",function(){
+    if(y0===null)return;
+    var d=dy*0.6;y0=null;
+    if(d>=TH){el.classList.add("spin");el.style.opacity=1;el.style.transform="translateY(24px)";setTimeout(function(){location.reload()},150)}
+    else{el.style.transition="all .2s";draw(0);setTimeout(function(){el.style.transition=""},220)}
+    dy=0;
+  },{passive:true});
+  document.addEventListener("touchcancel",function(){y0=null;dy=0;draw(0)},{passive:true});
+})();
 
 /* Mulai */
 if(!hasGS&&"serviceWorker" in navigator&&/^https?:$/.test(location.protocol)){navigator.serviceWorker.register("sw.js").catch(function(){})}
