@@ -6,6 +6,8 @@
 const SS_ID = '1-JkKyaiNzQl4XfQXefa93IefEAVF6jTvhCmTckM3NY8';
 const FOLDER_ID = '12Pw5Bsb8SBntE9z_bYAxzASg-a59elfl';
 const ROLES = ['admin', 'j1', 'j2', 'j3', 'timer', 'hakim', 'monitor'];
+// Remarks when points equal (lembar skor WAKO)
+const REMARKS = { last: 'Lebih baik di ronde terakhir', active: 'Lebih aktif', kicks: 'Lebih banyak tendangan', defense: 'Pertahanan lebih baik', style: 'Gaya dan teknik lebih baik' };
 const HEAD = {
   Events: ['id', 'nama', 'tanggal', 'admin', 'j1', 'j2', 'j3', 'timer', 'hakim', 'monitor', 'folderId', 'recapId', 'kode', 'pemilik', 'dibuat'],
   Matches: ['eventId', 'no', 'merah', 'biru', 'kelas', 'aturan', 'rounds', 'dur', 'status', 'hasil', 'rest', 'timMerah', 'timBiru'],
@@ -134,7 +136,7 @@ function createEvent(token, p) {
     const rs = SpreadsheetApp.create('Rekap - ' + nama);
     const tab = rs.getSheets()[0];
     tab.setName('Rekap');
-    tab.appendRow(['Waktu', 'Partai', 'Merah', 'Biru', 'Kelas', 'Aturan', 'Ronde', 'Juri 1 (M-B)', 'Juri 2 (M-B)', 'Juri 3 (M-B)', 'KD (M-B)', 'Peringatan (M-B)', 'Poin minus (M-B)', 'Pemenang', 'Keputusan']);
+    tab.appendRow(['Waktu', 'Partai', 'Merah', 'Biru', 'Kelas', 'Aturan', 'Ronde', 'Juri 1 (M-B)', 'Juri 2 (M-B)', 'Juri 3 (M-B)', 'KD (M-B)', 'Peringatan (M-B)', 'Poin minus (M-B)', 'Pemenang', 'Keputusan', 'Catatan hakim']);
     tab.setFrozenRows(1);
     DriveApp.getFileById(rs.getId()).moveTo(folder);
     try { folder.addViewer(s.email); } catch (e) { /* abaikan jika gagal */ }
@@ -181,31 +183,40 @@ function tot_(st, j, s) {
 function verdict_(st) {
   const v = { r: 0, b: 0, d: 0 };
   for (let j = 0; j < 3; j++) { const a = tot_(st, j, 'r'), b = tot_(st, j, 'b'); if (a > b) v.r++; else if (b > a) v.b++; else v.d++; }
-  let side = null, type = 'Seri';
+  let side = null, type = 'Seri', tie = false, detail = '';
   if (v.r > v.b && v.r >= 2) side = 'r'; else if (v.b > v.r && v.b >= 2) side = 'b';
   if (side) {
     const w = side === 'r' ? v.r : v.b, o = side === 'r' ? v.b : v.r;
     type = w === 3 ? 'Unanimous' : (o === 1 ? 'Split' : 'Majority');
+  } else if (!st.done) { // sementara: pertandingan belum diakhiri
+    tie = true;
+  } else if (st.rm && st.rm.k && st.rm.s) { // seri: diputuskan dewan hakim (alasan hanya untuk catatan internal)
+    tie = true; side = st.rm.s; type = 'Keputusan dewan hakim';
+    detail = 'Remarks: ' + REMARKS[st.rm.k] + '; pemenang: ' + (side === 'r' ? st.info.merah : st.info.biru);
   } else { // seri: poin terbanyak di ronde terakhir
+    tie = true;
     let ra = st.kd[st.rd].r, rb = st.kd[st.rd].b;
     for (let j = 0; j < 3; j++) { ra += st.pts[st.rd][j].r; rb += st.pts[st.rd][j].b; }
     if (ra > rb) side = 'r'; else if (rb > ra) side = 'b';
-    type = side ? 'Seri, ditentukan poin ronde terakhir (' + Math.max(ra, rb) + '-' + Math.min(ra, rb) + ')' : 'Seri penuh';
+    type = side ? 'Keputusan dewan hakim' : 'Seri penuh';
+    detail = 'Poin ronde terakhir ' + ra + '-' + rb;
   }
-  return { r: v.r, b: v.b, d: v.d, side: side, type: type };
+  return { r: v.r, b: v.b, d: v.d, side: side, type: type, tie: tie, detail: detail };
 }
-function board_(e) {
+// Alasan keputusan (detail) dan remarks hanya dikirim ke dewan hakim, tidak ke layar lain
+function pub_(v, role) { if (role !== 'hakim') delete v.detail; return v; }
+function board_(e, role) {
   const st = getLive_(e);
   if (!st) return { empty: true };
   let rem = st.time, run = st.running;
   if (run) { rem = Math.max(0, st.time - (Date.now() - st.t0) / 1000); if (rem <= 0) run = false; }
   return {
-    st: { info: st.info, mid: st.mid, rd: st.rd, rest: !!st.rest, nama: st.nama || '', done: st.done, final: st.final, pts: st.pts, kd: st.kd, w: st.w, m: st.m },
-    rem: rem, running: run, v: verdict_(st),
+    st: { info: st.info, mid: st.mid, rd: st.rd, rest: !!st.rest, nama: st.nama || '', rm: role === 'hakim' ? (st.rm || null) : null, done: st.done, final: st.final, pts: st.pts, kd: st.kd, w: st.w, m: st.m },
+    rem: rem, running: run, v: pub_(verdict_(st), role),
     tot: [0, 1, 2].map(j => ({ r: tot_(st, j, 'r'), b: tot_(st, j, 'b') }))
   };
 }
-function getBoard(token) { return board_(auth_(token).e); }
+function getBoard(token) { const s = auth_(token); return board_(s.e, s.role); }
 function getMatches(token) {
   const s = auth_(token);
   if (s.role !== 'admin') throw new Error('Tidak diizinkan');
@@ -243,7 +254,7 @@ function doAct_(s, type, p) {
       setLive_(e, ns);
       sh_('Matches').getRange(m._row, 9, 1, 2).setValues([['berjalan', '']]);
       log_(e, { mid: no }, R, type);
-      return { board: board_(e), msg: type === 'reset' ? 'Skor partai direset' : 'Partai ' + no + ' aktif' };
+      return { board: board_(e, R), msg: type === 'reset' ? 'Skor partai direset' : 'Partai ' + no + ' aktif' };
     }
     throw new Error('Tidak diizinkan');
   }
@@ -255,7 +266,7 @@ function doAct_(s, type, p) {
     if (st.done) throw new Error('Pertandingan sudah diakhiri');
     if (st.rest) throw new Error('Sedang istirahat');
     const j = +R[1] - 1;
-    if (st.pts[st.rd][j][side] + d < 0) return { board: board_(e) };
+    if (st.pts[st.rd][j][side] + d < 0) return { board: board_(e, R) };
     st.pts[st.rd][j][side] += d;
     log_(e, st, R, 'poin', side, d);
   } else if (R === 'timer') {
@@ -276,6 +287,12 @@ function doAct_(s, type, p) {
     if (type === 'kd') { st.kd[st.rd][side] = Math.max(0, st.kd[st.rd][side] + d); log_(e, st, R, 'knockdown', side, d); }
     else if (type === 'w') { st.w[side] = Math.max(0, st.w[side] + d); log_(e, st, R, 'peringatan', side, d); }
     else if (type === 'm') { st.m[side] = Math.max(0, st.m[side] + d); log_(e, st, R, 'minus', side, d); }
+    else if (type === 'remark') {
+      if (st.done && st.final) throw new Error('Hasil sudah disahkan');
+      const k = REMARKS[p.k] ? p.k : '', w = p.s === 'r' || p.s === 'b' ? p.s : '';
+      st.rm = (k || w) ? { k: k, s: w } : null;
+      log_(e, st, R, 'remarks', w, k);
+    }
     else if (type === 'final') {
       if (!st.done) throw new Error('Timekeeper belum mengakhiri pertandingan');
       st.final = true;
@@ -283,7 +300,7 @@ function doAct_(s, type, p) {
     } else throw new Error('Tidak diizinkan');
   } else throw new Error('Tidak diizinkan');
   setLive_(e, st);
-  return { board: board_(e), msg: st.final ? 'Hasil disahkan dan direkap ke Drive' : '' };
+  return { board: board_(e, R), msg: st.final ? 'Hasil disahkan dan direkap ke Drive' : '' };
 }
 
 /* ---------- Event, rekap Drive ---------- */
@@ -300,7 +317,7 @@ function finalize_(e, st) {
   const J = j => tot_(st, j, 'r') + '-' + tot_(st, j, 'b');
   SpreadsheetApp.openById(ev.recapId).getSheetByName('Rekap').appendRow([
     new Date(), st.mid, st.info.merah, st.info.biru, st.info.kelas, st.info.aturan, st.rd + 1,
-    J(0), J(1), J(2), kd.r + '-' + kd.b, sum('w'), sum('m'), win, v.type
+    J(0), J(1), J(2), kd.r + '-' + kd.b, sum('w'), sum('m'), win, v.type, v.detail || ''
   ]);
   const m = rows_('Matches').find(x => x.eventId === e && +x.no === +st.mid);
   if (m) sh_('Matches').getRange(m._row, 9, 1, 2).setValues([['selesai', win + ' - ' + v.type]]);
