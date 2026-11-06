@@ -6,6 +6,8 @@
 const SS_ID = '1-JkKyaiNzQl4XfQXefa93IefEAVF6jTvhCmTckM3NY8';
 const FOLDER_ID = '12Pw5Bsb8SBntE9z_bYAxzASg-a59elfl';
 const ROLES = ['admin', 'j1', 'j2', 'j3', 'timer', 'hakim', 'monitor'];
+// Input poin juri tetap terbuka sekian detik setelah waktu ronde habis, lalu terkunci
+const GRACE_SEC = 10;
 // Remarks when points equal (lembar skor WAKO)
 const REMARKS = { last: 'Lebih baik di ronde terakhir', active: 'Lebih aktif', kicks: 'Lebih banyak tendangan', defense: 'Pertahanan lebih baik', style: 'Gaya dan teknik lebih baik' };
 const HEAD = {
@@ -170,10 +172,18 @@ function init_(m) {
 }
 function fix_(st) { // bekukan sisa waktu sebelum aksi timer
   if (st.running) {
-    const rem = Math.max(0, st.time - (Date.now() - st.t0) / 1000);
+    const end = st.t0 + st.time * 1000, rem = Math.max(0, st.time - (Date.now() - st.t0) / 1000);
     st.time = rem; st.t0 = Date.now();
-    if (rem <= 0) st.running = false;
+    if (rem <= 0) { st.running = false; st.endAt = end; } // catat kapan waktu ronde habis
   }
+}
+// Detik sejak waktu ronde habis (null bila belum habis, sedang istirahat, atau pertandingan selesai)
+function overrun_(st) {
+  if (st.done || st.rest) return null;
+  const now = Date.now();
+  if (st.running) { const end = st.t0 + st.time * 1000; return now >= end ? (now - end) / 1000 : null; }
+  if (st.time <= 0) return st.endAt ? (now - st.endAt) / 1000 : 999;
+  return null;
 }
 function tot_(st, j, s) {
   let t = 0;
@@ -212,15 +222,26 @@ function board_(e, role) {
   if (run) { rem = Math.max(0, st.time - (Date.now() - st.t0) / 1000); if (rem <= 0) run = false; }
   return {
     st: { info: st.info, mid: st.mid, rd: st.rd, rest: !!st.rest, nama: st.nama || '', rm: role === 'hakim' ? (st.rm || null) : null, done: st.done, final: st.final, pts: st.pts, kd: st.kd, w: st.w, m: st.m },
-    rem: rem, running: run, v: pub_(verdict_(st), role),
+    rem: rem, running: run, ovr: overrun_(st), grace: GRACE_SEC, v: pub_(verdict_(st), role),
     tot: [0, 1, 2].map(j => ({ r: tot_(st, j, 'r'), b: tot_(st, j, 'b') }))
   };
 }
 function getBoard(token) { const s = auth_(token); return board_(s.e, s.role); }
+// Partai aktif yang belum disentuh sama sekali (belum mulai, tanpa poin/knockdown/peringatan/minus)
+function fresh_(st) {
+  if (st.final || st.done || st.running || st.rd !== 0 || st.rest || st.time < st.info.dur) return false;
+  if (st.w.r || st.w.b || st.m.r || st.m.b) return false;
+  for (let i = 0; i < st.pts.length; i++) {
+    if (st.kd[i].r || st.kd[i].b) return false;
+    for (let j = 0; j < 3; j++) if (st.pts[i][j].r || st.pts[i][j].b) return false;
+  }
+  return true;
+}
 function getMatches(token) {
   const s = auth_(token);
   if (s.role !== 'admin') throw new Error('Tidak diizinkan');
-  return rows_('Matches').filter(m => m.eventId === s.e).map(m => ({ no: m.no, merah: m.merah, biru: m.biru, kelas: m.kelas, aturan: m.aturan, status: m.status, hasil: m.hasil }));
+  const live = getLive_(s.e);
+  return rows_('Matches').filter(m => m.eventId === s.e).map(m => ({ active: !!(live && !live.final && +live.mid === +m.no), fresh: !!(live && +live.mid === +m.no && fresh_(live)), no: m.no, merah: m.merah, biru: m.biru, kelas: m.kelas, aturan: m.aturan, status: m.status, hasil: m.hasil, rounds: m.rounds, dur: m.dur, rest: m.rest, timMerah: m.timMerah, timBiru: m.timBiru }));
 }
 /* ---------- Aksi (dikunci agar tidak saling menimpa) ---------- */
 function act(token, type, p) {
@@ -236,9 +257,38 @@ function doAct_(s, type, p) {
   if (R === 'admin') {
     if (type === 'addMatch') {
       if (!p.merah || !p.biru) throw new Error('Nama merah dan biru wajib diisi');
-      const no = rows_('Matches').filter(m => m.eventId === e).length + 1;
+      const no = rows_('Matches').filter(m => m.eventId === e).reduce((a, m) => Math.max(a, +m.no || 0), 0) + 1;
       sh_('Matches').appendRow([e, no, p.merah, p.biru, p.kelas || '', p.aturan || 'K-1', +p.rounds || 3, +p.dur || 120, 'menunggu', '', p.rest === '' || p.rest === undefined ? 60 : +p.rest, p.timMerah || '', p.timBiru || '']);
       return { msg: 'Partai ' + no + ' ditambahkan' };
+    }
+    if (type === 'editMatch' || type === 'delMatch') {
+      const m = rows_('Matches').find(x => x.eventId === e && +x.no === +p.no);
+      if (!m) throw new Error('Partai tidak ditemukan');
+      const live = getLive_(e);
+      if (live && +live.mid === +m.no && !live.final) throw new Error('Partai ini sedang aktif. Aktifkan partai lain dulu.');
+      if (type === 'delMatch') {
+        sh_('Matches').deleteRow(m._row);
+        log_(e, { mid: m.no }, R, 'hapusPartai');
+        return { msg: 'Partai ' + m.no + ' dihapus' };
+      }
+      if (m.status === 'selesai') throw new Error('Partai sudah selesai dan direkap, tidak bisa diubah');
+      if (!p.merah || !p.biru) throw new Error('Nama merah dan biru wajib diisi');
+      const sm = sh_('Matches');
+      sm.getRange(m._row, 3, 1, 6).setValues([[p.merah, p.biru, p.kelas || '', p.aturan || 'K-1', +p.rounds || 3, +p.dur || 120]]);
+      sm.getRange(m._row, 11, 1, 3).setValues([[p.rest === '' || p.rest === undefined ? 60 : +p.rest, p.timMerah || '', p.timBiru || '']]);
+      log_(e, { mid: m.no }, R, 'ubahPartai');
+      return { msg: 'Partai ' + m.no + ' diubah' };
+    }
+    if (type === 'deactivate') {
+      const live = getLive_(e);
+      const m = rows_('Matches').find(x => x.eventId === e && +x.no === +p.no);
+      if (!m) throw new Error('Partai tidak ditemukan');
+      if (!live || live.final || +live.mid !== +m.no) throw new Error('Partai ini tidak sedang aktif');
+      if (!fresh_(live)) throw new Error('Partai sudah dimulai, tidak bisa dibatalkan. Gunakan Reset skor bila perlu.');
+      setLive_(e, null);
+      sh_('Matches').getRange(m._row, 9, 1, 2).setValues([['menunggu', '']]);
+      log_(e, { mid: m.no }, R, 'batalAktif');
+      return { board: board_(e, R), msg: 'Partai ' + m.no + ' dibatalkan, kembali ke daftar' };
     }
     if (type === 'activate' || type === 'reset') {
       const live = getLive_(e);
@@ -265,6 +315,8 @@ function doAct_(s, type, p) {
     if (type !== 'pt') throw new Error('Tidak diizinkan');
     if (st.done) throw new Error('Pertandingan sudah diakhiri');
     if (st.rest) throw new Error('Sedang istirahat');
+    const ov = overrun_(st);
+    if (ov !== null && ov > GRACE_SEC + 3) throw new Error('Ronde sudah selesai, input poin ditutup'); // +3 detik toleransi jaringan
     const j = +R[1] - 1;
     if (st.pts[st.rd][j][side] + d < 0) return { board: board_(e, R) };
     st.pts[st.rd][j][side] += d;
@@ -275,12 +327,12 @@ function doAct_(s, type, p) {
     if (p.a === 'toggle' && !st.done) {
       if (st.running) st.running = false; else if (st.time > 0) { st.running = true; st.t0 = Date.now(); }
     } else if (p.a === 'adj' && !st.running && !st.done) {
-      st.time = Math.max(0, Math.min(st.rest ? (st.info.rest || 60) : st.info.dur, st.time + d));
+      st.time = Math.max(0, Math.min(st.rest ? (st.info.rest || 60) : st.info.dur, st.time + d)); st.endAt = null;
     } else if (p.a === 'next' && !st.done) {
-      st.running = false; st.rest = false;
+      st.running = false; st.rest = false; st.endAt = null;
       if (st.rd + 1 < st.info.rounds) { st.rd++; st.time = st.info.dur; } else st.done = true;
     } else if (p.a === 'rest' && !st.done && !st.rest && st.time <= 0 && st.rd + 1 < st.info.rounds) {
-      st.rest = true; st.time = st.info.rest || 60; st.running = true; st.t0 = Date.now();
+      st.rest = true; st.endAt = null; st.time = st.info.rest || 60; st.running = true; st.t0 = Date.now();
     }
     log_(e, st, R, 'timer', '', p.a);
   } else if (R === 'hakim') {

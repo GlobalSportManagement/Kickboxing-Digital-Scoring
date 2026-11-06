@@ -400,11 +400,11 @@ function buildCtl(){
   var R=ME.role,h="";
   
   if(R=="admin"){
-    $("ctl").innerHTML="<div class='card'><h2>Tambah partai</h2><div class='grid'>"+
+    $("ctl").innerHTML="<div class='card'><h2 id='amh'>Tambah partai</h2><div class='grid'>"+
      "<label>Sudut merah<input id='am'></label><label>Sudut biru<input id='ab'></label><label>Kelas<input id='ak' placeholder='-67 kg'></label><label>Kontingen merah<input id='at1'></label><label>Kontingen biru<input id='at2'></label>"+
      "<label>Aturan<select id='au'><option>K-1</option><option>Low Kick</option><option>Full Contact</option></select></label>"+
      "<label>Jumlah ronde<input id='ar' type='number' min='1' max='12' value='3'></label><label>Durasi ronde (detik)<input id='ad' type='number' min='10' step='10' value='120'></label><label>Istirahat (detik)<input id='as' type='number' min='0' step='10' value='60'></label></div>"+
-     "<div class='row' style='margin-top:8px'><button class='pri' onclick='addM()'>Tambah partai</button></div></div>"+
+     "<div class='row' style='margin-top:8px'><button class='pri' id='amb' onclick='addM()'>Tambah partai</button><button id='amc' onclick='cancelEdit()' hidden>Batal</button></div></div>"+
      "<div class='card'><h2>Daftar partai</h2><div id='ml'>Memuat...</div><div class='row' style='margin-top:8px'><button onclick='if(confirm(\"Reset semua skor partai aktif?\"))act(\"reset\")'>Reset skor partai aktif</button></div></div>";
     loadM();return
   }
@@ -526,11 +526,35 @@ function jMenu(on){$("jvM").hidden=!on}
 function fs(){try{var e=document.documentElement;if(document.fullscreenElement)document.exitFullscreen();else if(e.requestFullscreen)e.requestFullscreen()}catch(x){}}
 
 /* Admin */
-function addM(){act("addMatch",{merah:$("am").value,biru:$("ab").value,kelas:$("ak").value,timMerah:$("at1").value,timBiru:$("at2").value,aturan:$("au").value,rounds:$("ar").value,dur:$("ad").value,rest:$("as").value},function(){$("am").value="";$("ab").value="";$("at1").value="";$("at2").value="";loadM()})}
+var EDIT=null,MLIST=[];
+function mVals(){return{merah:$("am").value,biru:$("ab").value,kelas:$("ak").value,timMerah:$("at1").value,timBiru:$("at2").value,aturan:$("au").value,rounds:$("ar").value,dur:$("ad").value,rest:$("as").value}}
+function clearForm(){$("am").value="";$("ab").value="";$("at1").value="";$("at2").value=""}
+function addM(){
+  var v=mVals();
+  if(EDIT!==null){v.no=EDIT;act("editMatch",v,function(){cancelEdit();loadM()});return}
+  act("addMatch",v,function(){clearForm();loadM()})
+}
+function editM(no){
+  var m=MLIST.filter(function(x){return +x.no===+no})[0];if(!m)return;
+  EDIT=m.no;
+  $("am").value=m.merah;$("ab").value=m.biru;$("ak").value=m.kelas||"";$("at1").value=m.timMerah||"";$("at2").value=m.timBiru||"";
+  $("au").value=m.aturan||"K-1";$("ar").value=m.rounds;$("ad").value=m.dur;$("as").value=m.rest;
+  $("amh").textContent="Ubah partai "+m.no;$("amb").textContent="Simpan perubahan";$("amc").hidden=false;
+  $("amh").scrollIntoView({behavior:"smooth",block:"start"})
+}
+function cancelEdit(){EDIT=null;clearForm();$("amh").textContent="Tambah partai";$("amb").textContent="Tambah partai";$("amc").hidden=true}
+function delM(no){
+  if(!confirm("Hapus partai "+no+"? Tidak bisa dibatalkan."))return;
+  act("delMatch",{no:no},function(){if(EDIT!==null&&+EDIT===+no)cancelEdit();loadM()})
+}
 function loadM(){call("getMatches",[T],function(l){
+  MLIST=l;
   $("ml").innerHTML=l.length?"<table><tr><th>No</th><th>Merah</th><th>Biru</th><th>Kelas</th><th>Status</th><th></th></tr>"+l.map(function(m){
-    return"<tr><td>"+m.no+"</td><td>"+esc(m.merah)+"</td><td>"+esc(m.biru)+"</td><td>"+esc(m.kelas)+"</td><td>"+esc(m.status)+(m.hasil?"<br><small>"+esc(m.hasil)+"</small>":"")+"</td><td>"+
-    (m.status=="selesai"?"":"<button onclick='act(\"activate\",{no:"+m.no+"},loadM)'>Aktifkan</button>")+"</td></tr>"}).join("")+"</table>":"Belum ada partai."})}
+    var done=m.status=="selesai";
+    return"<tr><td>"+m.no+"</td><td>"+esc(m.merah)+"</td><td>"+esc(m.biru)+"</td><td>"+esc(m.kelas)+"</td><td>"+esc(m.status)+(m.hasil?"<br><small>"+esc(m.hasil)+"</small>":"")+"</td><td><div class='row'>"+
+    (m.active?"<b>Sedang aktif</b>"+(m.fresh?"<button onclick='act(\"deactivate\",{no:"+m.no+"},loadM)'>Batalkan aktif</button>":""):
+      (done?"":"<button onclick='act(\"activate\",{no:"+m.no+"},loadM)'>Aktifkan</button><button onclick='editM("+m.no+")'>Ubah</button>")+"<button onclick='delM("+m.no+")'>Hapus</button>")+
+    "</div></td></tr>"}).join("")+"</table>":"Belum ada partai."})}
 
 /* Tarik ke bawah untuk refresh (HP/tablet). Tidak aktif di layar juri dan monitor. */
 (function(){
