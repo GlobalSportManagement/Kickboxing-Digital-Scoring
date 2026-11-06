@@ -210,7 +210,7 @@ function toast(t,bad){var m=$("msg");m.textContent=t;m.className=bad?"bad":"ok";
 function ls(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k));if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v))}catch(e){}return null}
 function call(fn,args,ok,bad){
   ok=ok||function(){};
-  var fail=function(m){polling=false;if(bad)bad();m=String(m||"").replace(/^Error: /,"");toast(m,1);if(/Sesi habis/.test(m))expired()};
+  var fail=function(m){polling=false;m=String(m||"").replace(/^Error: /,"");if(bad&&bad(m)===true)return;toast(m,1);if(/Sesi habis/.test(m))expired()};
   if(hasGS){
     var r=google.script.run.withSuccessHandler(ok).withFailureHandler(function(e){fail((e&&e.message)||e)});
     r[fn].apply(r,args)
@@ -223,14 +223,14 @@ function call(fn,args,ok,bad){
 }
 function expired(){
   if(TVMODE){$("tvbody").innerHTML="<div class='tvmsg'>Sesi habis. Tutup jendela ini lalu buka Layar TV lagi dari aplikasi.</div>";return}
-  if(resuming){resuming=false;var k=LAST&&LAST.kode;LAST=null;ls("kbL",null);showJoin(k);return}
-  if(ME){leave();return}
+  if(resuming||ME){var k=(LAST&&LAST.kode)||(ME&&ME.kode)||"";resuming=false;ME=null;T=null;B=null;LAST=null;ls("kbL",null);ls("kbA",null);showJoin(k);return}
   if(U){U=null;ls("kbU",null);showHome()}
 }
 function show(v){
   ["home","join","create","hist","app"].forEach(function(x){$(x).hidden=(x!=v)});
   var t=$("ttl");t.className=v=="app"?"":"big";t.textContent=(v=="app"&&ME)?ME.nama:"Kickboxing Digital Scoring";
   if(v!="app"){$("jv").hidden=true;$("tv").hidden=true;document.body.classList.remove("jmode","tvmode");document.body.style.overflow=""}
+  if(v!="app")ls("kbV",v);
   window.scrollTo(0,0)
 }
 
@@ -259,13 +259,13 @@ function showHome(){
 }
 function clearLast(){LAST=null;ls("kbL",null);showHome()}
 function startSession(s){
-  ME=s;T=s.token;LAST={token:s.token,e:s.e,role:s.role,nama:s.nama,kode:s.kode};ls("kbL",LAST);enter()
+  ME=s;T=s.token;LAST={token:s.token,e:s.e,role:s.role,nama:s.nama,kode:s.kode};ls("kbL",LAST);ls("kbA",true);enter()
 }
 function resume(){
   if(!LAST)return;resuming=true;T=LAST.token;
-  call("getBoard",[T],function(b){resuming=false;ME=LAST;enter();apply(b)})
+  call("getBoard",[T],function(b){resuming=false;ME=LAST;ls("kbA",true);enter();apply(b)})
 }
-function leave(){ME=null;T=null;B=null;showHome()}
+function leave(){ME=null;T=null;B=null;ls("kbA",null);showHome()}
 
 /* Gabung */
 function showJoin(k){show("join");$("jkode").value=k||"";$("jpin").value="";(k?$("jpin"):$("jkode")).focus()}
@@ -304,7 +304,7 @@ function enter(){
   poll()
 }
 function poll(){if(!ME||polling)return;polling=true;call("getBoard",[T],function(b){polling=false;if(pend>0)return;apply(b)})}
-function apply(b){if(!ME)return;B=b;fAt=Date.now();if(isJ())drawJudge();else if(isTV())drawTV();else if(ME.role=="timer")drawTimer();else{drawBoard();drawCtl()}}
+function apply(b){if(!ME)return;resuming=false;B=b;fAt=Date.now();if(isJ())drawJudge();else if(isTV())drawTV();else if(ME.role=="timer")drawTimer();else{drawBoard();drawCtl()}}
 function act(type,p,after){call("act",[T,type,p||{}],function(r){
   if(r&&r.board)apply(r.board);if(r&&r.msg)toast(r.msg);if(after)after(r)})}
 
@@ -318,7 +318,8 @@ function jrow(j){var a=B.tot[j].r,b=B.tot[j].b;
 function kdSum(s){var t=0;B.st.kd.forEach(function(k){t+=k[s]});return t}
 function nm(s){return s=="r"?B.st.info.merah:B.st.info.biru}
 function boardHTML(){
-  if(!B||B.empty)return"<div class='top'>Belum ada partai aktif. Menunggu admin mengaktifkan partai.</div>";
+  if(!B)return"<div class='top'>Memuat...</div>";
+  if(B.empty)return"<div class='top'>Belum ada partai aktif. Menunggu admin mengaktifkan partai.</div>";
   var st=B.st,v=B.v,res;
   if(st.final)res="<div class='res fin'>"+(v.side?"Pemenang: "+esc(nm(v.side))+" ("+(v.side=="r"?"merah":"biru")+") - "+esc(v.type):"Seri penuh, perlu keputusan panitia")+"</div>";
   else if(st.done)res="<div class='res'>Pertandingan selesai, menunggu pengesahan dewan hakim</div>";
@@ -372,7 +373,7 @@ function buildTimer(){
 function drawTimer(){
   if(!$("tkT"))return;
   var st=B&&!B.empty?B.st:null,t=$("tkT"),n=$("tkN"),rb=$("tkR");
-  if(!st){$("tkI").textContent="Belum ada partai aktif";$("tkC").textContent="--:--";t.disabled=n.disabled=rb.disabled=true;return}
+  if(!st){$("tkI").textContent=B?"Belum ada partai aktif":"Memuat...";$("tkC").textContent="--:--";t.disabled=n.disabled=rb.disabled=true;return}
   var r=remain(),run=B.running&&r>0,over=st.done||st.final,rest=st.rest,total=rest?(st.info.rest||60):st.info.dur;
   $("tkI").textContent=over?"Pertandingan selesai":(rest?"Istirahat setelah ronde "+(st.rd+1):"Ronde "+(st.rd+1)+" dari "+st.info.rounds);
   var c=$("tkC");c.textContent=fmt(r);c.className="tkclock"+(r<=10&&!over?" low":"");
@@ -447,7 +448,7 @@ function tvClock(){
 function drawTV(){
   var el=$("tvbody");if(!el)return;
   el.className=tvS()==2?"tv2":"";
-  if(!B||B.empty){el.innerHTML="<div class='tvban'>"+esc(ME.nama||"Kickboxing Digital Scoring")+"</div><div class='tvmsg'>Menunggu partai diaktifkan</div>";return}
+  if(!B||B.empty){el.innerHTML="<div class='tvban'>"+esc(ME.nama||"Kickboxing Digital Scoring")+"</div><div class='tvmsg'>"+(B?"Menunggu partai diaktifkan":"Memuat...")+"</div>";return}
   var st=B.st,v=B.v,fin=st.final;
   if(tvS()==2){el.innerHTML="<div class='tvban'>"+esc(st.nama||ME.nama||"Kickboxing Digital Scoring")+"</div><div class='tvb2'>"+boardHTML()+"</div>";return}
   function row(s){
@@ -469,7 +470,8 @@ function drawTV(){
 
 /* Layar juri: layar penuh, hanya input poin */
 function jState(){
-  if(!B||B.empty)return"Menunggu partai diaktifkan";
+  if(!B)return"Memuat...";
+  if(B.empty)return"Menunggu partai diaktifkan";
   var st=B.st;if(st.final)return"Hasil disahkan";if(st.done)return"Pertandingan selesai";if(st.rest)return"Istirahat";
   var r=remain();if(B.running&&r>0)return"";
   if(r<=0)return"Ronde "+(st.rd+1)+" selesai";
@@ -515,7 +517,16 @@ function loadM(){call("getMatches",[T],function(l){
 if(!hasGS&&"serviceWorker" in navigator&&/^https?:$/.test(location.protocol)){navigator.serviceWorker.register("sw.js").catch(function(){})}
 var tvh=location.hash.match(/^#tv=(.+)$/);
 if(tvh){startTV(decodeURIComponent(tvh[1]))}
-else{U=ls("kbU");LAST=ls("kbL");showHome();initG();if(U)call("me",[U.token],function(){})}
+else{
+  U=ls("kbU");LAST=ls("kbL");var V=ls("kbV");
+  if(ls("kbA")&&LAST){ME=LAST;T=LAST.token;resuming=true;enter()}
+  else if(V=="join")showJoin();
+  else if(V=="create"&&U)showCreate();
+  else if(V=="hist"&&U)showHist();
+  else showHome();
+  initG();
+  if(U)call("me",[U.token],null,function(){U=null;ls("kbU",null);if(!ME)showHome();return true})
+}
 </script>
 </body>
 </html>

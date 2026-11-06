@@ -7,6 +7,7 @@ Tampilan di GitHub Pages (PWA, bisa diinstal), server di Apps Script.
 ## Cara kerja
 - **Login Google** (hanya di versi GitHub Pages): siapa pun yang login boleh **membuat event** dan melihat **riwayat** event-nya.
 - **Gabung hari pertandingan**: kode event (4 angka) + PIN peran. Tidak perlu akun Google, jadi juri dan monitor bisa langsung masuk.
+- **Refresh tidak keluar dari menu**: saat halaman dimuat ulang, aplikasi kembali ke event dan peran terakhir (misalnya layar juri) tanpa menekan apa pun. Hanya tombol **Tutup event** (atau sesi yang habis, sekitar 6 jam) yang mengembalikan ke menu awal; saat sesi habis, form Gabung muncul dengan kode event sudah terisi. Menu Gabung, Buat event, dan Riwayat event juga bertahan saat refresh. Fitur ini memakai penyimpanan browser, jadi berlaku di versi GitHub Pages.
 - **Lanjutkan**: kembali ke event dan peran terakhir di perangkat itu (sesi berlaku sekitar 6 jam). **Hapus sesi tersimpan** membersihkannya.
 
 | Peran | Tugas |
