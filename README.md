@@ -14,8 +14,8 @@ Tampilan di GitHub Pages (PWA, bisa diinstal), server di Apps Script.
 | Admin | Menambah partai (nama, kontingen, kelas, ronde, durasi, istirahat), mengaktifkan partai, reset skor partai aktif |
 | Juri 1-3 | Layar penuh dua sisi: ketuk sisi merah atau biru untuk +1, tombol minus untuk koreksi. Dikunci otomatis saat ronde belum mulai, dijeda, atau selesai |
 | Timekeeper | Hanya waktu besar dan 3 tombol: Mulai / Stop / Lanjutkan waktu, Ronde berikutnya (atau Akhiri pertandingan di ronde terakhir), Mulai istirahat. Lama istirahat diatur admin per partai (default 60 detik) |
-| Dewan hakim | Knockdown, peringatan, poin minus, mengesahkan hasil |
-| Monitor | Layar TV/proyektor layar penuh: judul event, ronde dan waktu, skor tiap juri, jumlah juri yang unggul, KD/peringatan/minus, dan lencana WIN setelah hasil disahkan |
+| Dewan hakim | Knockdown, peringatan, poin minus, **remarks saat poin sama** (lima alasan sesuai lembar skor WAKO + pemenang), mengesahkan hasil. Alasan remarks tidak ditampilkan di layar mana pun dan tidak dikirim ke perangkat selain dewan hakim; hanya tercatat di kolom *Catatan hakim* pada spreadsheet rekap |
+| Monitor | Layar TV/proyektor layar penuh: judul event, ronde dan waktu, skor tiap juri, KD/peringatan/minus, dan lencana WIN setelah hasil disahkan. Ada 2 pilihan tampilan (tombol di pojok kiri atas, tersimpan di perangkat): **Baris** (skor J1-J3 + TOTAL, titik emas di kotak TOTAL yang menunjukkan jumlah juri yang unggul, tanpa menunjuk juri tertentu) dan **Papan** (papan gelap dengan titik selisih tiap juri dan jumlah juri yang unggul) |
 
 Semua peran selain juri punya tombol **Layar TV** yang membuka jendela terpisah. Geser jendela itu ke layar kedua (extend), lalu klik **Layar penuh** atau klik dua kali. Jendela utama bebas dipakai untuk bekerja. Tombol ini hanya ada di versi GitHub Pages.
 

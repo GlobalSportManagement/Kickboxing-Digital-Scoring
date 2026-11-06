@@ -153,6 +153,12 @@ body.tvmode #msg:empty{display:none}
 .tvb2 .dots span{gap:.5vw}
 .tvb2 .dots i{width:2.3vw;height:2.3vw}
 .tvb2 .res{font-size:2vw;padding:.8vw;margin-top:.4vw}
+.rmk{margin-top:10px;padding:10px;border:1px solid var(--bd);border-radius:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center}
+.chip{padding:6px 12px;border-radius:99px;font-size:14px}
+.chip.on{background:var(--gold);border-color:var(--gold);color:#12204A;font-weight:700}
+.chip.r{border-color:var(--red)}.chip.b{border-color:var(--blue)}
+.chip:disabled{opacity:.45;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -337,6 +343,17 @@ setInterval(poll,2000);
 function sideBtns(label,fn){return["r","b"].map(function(s){return"<button onclick='"+fn+"(\""+s+"\",1)'>"+label+" +1 "+(s=="r"?"merah":"biru")+"</button><button onclick='"+fn+"(\""+s+"\",-1)'>-1</button>"}).join(" ")}
 function jp(s,d){act("pt",{s:s,d:d})}
 function hk(k,s,d){act(k,{s:s,d:d})}
+var RMK=[["last","Lebih baik di ronde terakhir"],["active","Lebih aktif"],["kicks","Lebih banyak tendangan"],["defense","Pertahanan lebih baik"],["style","Gaya dan teknik lebih baik"]];
+function remarksHTML(st){
+  var tie=B&&B.v&&B.v.tie,rm=st.rm||{k:"",s:""},off=(!tie||st.final)?" disabled":"";
+  var h="<div class='rmk'><b>Remarks saat poin sama</b> <small>(Remarks when points equal)</small><div class='chips'>"+
+    RMK.map(function(x){return"<button class='chip"+(rm.k==x[0]?" on":"")+"'"+off+" onclick='rmk(\""+x[0]+"\")'>"+x[1]+"</button>"}).join("")+"</div>"+
+    "<div class='chips'><span class='kb' style='margin:0'>Pemenang:</span><button class='chip r"+(rm.s=="r"?" on":"")+"'"+off+" onclick='rmkW(\"r\")'>"+esc(nm("r"))+"</button><button class='chip b"+(rm.s=="b"?" on":"")+"'"+off+" onclick='rmkW(\"b\")'>"+esc(nm("b"))+"</button></div>"+
+    "<div class='kb'>"+(!tie?"Dipakai hanya bila suara juri seri.":(rm.k&&rm.s?"Tercatat: "+esc(nm(rm.s))+" menang, "+RMK.filter(function(x){return x[0]==rm.k})[0][1].toLowerCase()+".":"Suara juri seri. Pilih alasan dan pemenang; bila kosong, pemenang ditentukan poin ronde terakhir."))+"</div></div>";
+  return h
+}
+function rmk(k){var c=B.st.rm||{k:"",s:""};act("remark",{k:c.k==k?"":k,s:c.s})}
+function rmkW(w){var c=B.st.rm||{k:"",s:""};act("remark",{k:c.k,s:c.s==w?"":w})}
 function tm(a,d){
   if(a=="toggle"&&B&&!B.empty){if(B.running){B.rem=remain();B.running=false}else if(remain()>0){B.running=true;fAt=Date.now()}drawTimer()}
   pend++;call("act",[T,"timer",{a:a,d:d}],function(r){pend--;if(pend===0&&r&&r.board)apply(r.board)},function(){pend--;poll()})
@@ -393,6 +410,7 @@ function drawCtl(){
       "<div>Knockdown "+kdSum(s)+" <button onclick='hk(\"kd\",\""+s+"\",1)'>+</button><button onclick='hk(\"kd\",\""+s+"\",-1)'>-</button></div>"+
       "<div>Peringatan "+st.w[s]+" <button onclick='hk(\"w\",\""+s+"\",1)'>+</button><button onclick='hk(\"w\",\""+s+"\",-1)'>-</button></div>"+
       "<div>Poin minus "+st.m[s]+" <button onclick='hk(\"m\",\""+s+"\",1)'>+</button><button onclick='hk(\"m\",\""+s+"\",-1)'>-</button></div></div>"}).join("")+"</div>"+
+      remarksHTML(st)+
       "<div style='overflow-x:auto;margin-top:8px'><table><tr><th>Ronde</th><th>Juri 1</th><th>Juri 2</th><th>Juri 3</th><th>KD</th></tr>"+
       st.pts.slice(0,st.rd+1).map(function(r,i){return"<tr><td>"+(i+1)+"</td>"+r.map(function(x){return"<td>"+x.r+" - "+x.b+"</td>"}).join("")+"<td>"+st.kd[i].r+" - "+st.kd[i].b+"</td></tr>"}).join("")+"</table></div>"+
       "<div class='row' style='margin-top:8px'><button class='pri' "+(st.done&&!st.final?"":"disabled")+" onclick='if(confirm(\"Sahkan hasil dan simpan rekap ke Drive?\"))act(\"final\")'>Sahkan hasil</button></div>"+
@@ -441,8 +459,8 @@ function drawTV(){
     return"<div class='tvrow "+s+"'><div class='tvid'>"+(team?"<div class='tvteam'>"+esc(team)+"</div>":"")+"<div class='tvname'>"+esc(name)+"</div>"+
      "<div class='tvstat'>KD "+kdSum(s)+" · Peringatan "+st.w[s]+" · Minus "+st.m[s]+"</div></div><div class='tvsc'>"+c+"</div>"+"<div class='tvwin"+(fin&&v.side==s?"":" ph")+"'>WIN</div>"+"</div>"
   }
-  var foot="Partai "+esc(st.mid)+" · "+esc(st.info.aturan)+(st.info.kelas?" · "+esc(st.info.kelas):"")+"  |  <span style='color:#F0B400'>&#9679;</span> jumlah juri yang unggul";
-  if(fin)foot=(v.side?"Keputusan: "+esc(v.type):"Seri penuh")+" · Juri "+v.r+"-"+v.b+(v.d?" (seri "+v.d+")":"")+"  |  "+foot;
+  var foot="Partai "+esc(st.mid)+" · "+esc(st.info.aturan)+(st.info.kelas?" · "+esc(st.info.kelas):"");
+  if(fin)foot=(v.side?(v.tie?esc(v.type):"Keputusan: "+esc(v.type)):"Seri penuh")+" · Juri "+v.r+"-"+v.b+(v.d?" (seri "+v.d+")":"")+"  |  "+foot;
   el.innerHTML="<div class='tvban'>"+esc(st.nama||ME.nama||"Kickboxing Digital Scoring")+"</div>"+
    "<div class='tvbox'><div><div class='tvr'>"+(st.rest?"ISTIRAHAT":"RONDE "+(st.rd+1))+"</div><div class='tvsub' id='tvsub'></div></div><div class='tvclock' id='tvclk'>0:00</div></div>"+
    row("r")+row("b")+"<div class='tvfoot'>"+foot+"</div>";
